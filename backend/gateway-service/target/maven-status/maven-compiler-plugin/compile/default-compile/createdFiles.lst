@@ -1,0 +1,3 @@
+com\nexmart\gateway\GatewayServiceApplication.class
+com\nexmart\gateway\filter\AuthenticationFilter.class
+com\nexmart\gateway\filter\AuthenticationFilter$Config.class

@@ -1,0 +1,3 @@
+com\nexmart\analytics\AnalyticsServiceApplication.class
+com\nexmart\analytics\controller\AnalyticsController.class
+com\nexmart\analytics\service\AnalyticsService.class

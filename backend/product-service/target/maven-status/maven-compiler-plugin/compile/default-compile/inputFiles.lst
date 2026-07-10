@@ -1,0 +1,12 @@
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\config\ProductSeeder.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\config\RedisConfig.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\controller\ProductController.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\entity\Category.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\entity\Product.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\entity\Review.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\exception\GlobalExceptionHandler.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\ProductServiceApplication.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\repository\CategoryRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\repository\ProductRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\repository\ReviewRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\product-service\src\main\java\com\nexmart\product\service\ProductService.java

@@ -88,7 +88,7 @@ export default function OrdersPage() {
                         </div>
                         <div>
                           <p className="font-mono font-bold text-text-primary text-sm">{order.orderNumber}</p>
-                          <p className="text-xs text-text-muted mt-1 flex items-center gap-1.5">
+                          <p className="text-xs text-text-muted mt-1 flex items-center gap-1.5" suppressHydrationWarning>
                             <Calendar className="w-3.5 h-3.5" />
                             {new Date(order.createdAt).toLocaleDateString()}
                           </p>

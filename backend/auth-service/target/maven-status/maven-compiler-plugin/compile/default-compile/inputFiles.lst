@@ -1,0 +1,12 @@
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\AuthServiceApplication.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\config\SecurityConfig.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\controller\AuthController.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\dto\RegisterRequest.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\entity\RefreshToken.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\entity\Role.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\entity\User.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\exception\GlobalExceptionHandler.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\repository\RefreshTokenRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\repository\UserRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\service\AuthService.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\service\JwtService.java

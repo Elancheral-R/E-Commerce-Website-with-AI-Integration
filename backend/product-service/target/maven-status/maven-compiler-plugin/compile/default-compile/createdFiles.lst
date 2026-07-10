@@ -1,0 +1,15 @@
+com\nexmart\product\entity\Review$ReviewBuilder.class
+com\nexmart\product\ProductServiceApplication.class
+com\nexmart\product\repository\ProductRepository.class
+com\nexmart\product\controller\ProductController.class
+com\nexmart\product\entity\Category.class
+com\nexmart\product\repository\ReviewRepository.class
+com\nexmart\product\repository\CategoryRepository.class
+com\nexmart\product\config\RedisConfig.class
+com\nexmart\product\exception\GlobalExceptionHandler.class
+com\nexmart\product\entity\Category$CategoryBuilder.class
+com\nexmart\product\entity\Review.class
+com\nexmart\product\entity\Product$ProductBuilder.class
+com\nexmart\product\entity\Product.class
+com\nexmart\product\service\ProductService.class
+com\nexmart\product\config\ProductSeeder.class

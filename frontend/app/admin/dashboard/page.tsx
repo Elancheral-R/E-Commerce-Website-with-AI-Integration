@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ShoppingBag, Users, ShieldAlert, Sparkles, TrendingUp,
   AlertTriangle, DollarSign, Package, Settings, LogOut, ChevronRight,
-  Eye, RefreshCw, BarChart2, Star, CheckCircle, XCircle
+  Eye, RefreshCw, BarChart2, Star, CheckCircle, XCircle, Search, Edit, Trash2
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { mockRevenueData } from "@/lib/mock-data";
+import { mockRevenueData, mockProducts } from "@/lib/mock-data";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store/auth";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend, LineChart, Line
+  LineChart, Line
 } from "recharts";
 
 const adminStats = [
@@ -31,7 +33,78 @@ const fraudAlerts = [
 ];
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "fraud" | "inventory">("overview");
+
+  // Local state for dynamically loaded tables
+  const [localUsers, setLocalUsers] = useState<any[]>([]);
+  const [localProducts, setLocalProducts] = useState<any[]>([]);
+
+  // Search filter states
+  const [userSearch, setUserSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+
+  // Role Gate check
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/auth/login?redirectTo=/admin/dashboard");
+    } else if (user?.role !== "admin") {
+      router.replace("/");
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Load User & Product list
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // 1. Get users from our new localStorage DB
+      const localUsersRaw = localStorage.getItem("nexmart-users-db");
+      if (localUsersRaw) {
+        setLocalUsers(JSON.parse(localUsersRaw));
+      } else {
+        // Seed default fallback array
+        const seeded = [
+          { id: "admin-001", email: "admin@nexmart.com", name: "System Admin", role: "admin", membershipLevel: "platinum", loyaltyPoints: 9999, createdAt: new Date().toISOString() },
+          { id: "u-1", email: "vikram@example.com", name: "Vikram Malhotra", role: "customer", membershipLevel: "gold", loyaltyPoints: 540, createdAt: new Date().toISOString() },
+          { id: "u-2", email: "sneha.r@example.com", name: "Sneha Reddy", role: "customer", membershipLevel: "silver", loyaltyPoints: 210, createdAt: new Date().toISOString() },
+          { id: "u-3", email: "rajesh.patel@domain.com", name: "Rajesh Patel", role: "seller", membershipLevel: "bronze", loyaltyPoints: 0, createdAt: new Date().toISOString() }
+        ];
+        localStorage.setItem("nexmart-users-db", JSON.stringify(seeded));
+        setLocalUsers(seeded);
+      }
+
+      // 2. Load products
+      setLocalProducts(mockProducts);
+    }
+  }, []);
+
+  if (!isAuthenticated || user?.role !== "admin") return null;
+
+  // Handle deleting a user
+  const handleDeleteUser = (id: string) => {
+    const updated = localUsers.filter((u) => u.id !== id);
+    setLocalUsers(updated);
+    localStorage.setItem("nexmart-users-db", JSON.stringify(updated));
+  };
+
+  // Handle changing user role
+  const handleToggleRole = (id: string, currentRole: string) => {
+    const nextRole = currentRole === "admin" ? "customer" : currentRole === "customer" ? "seller" : "admin";
+    const updated = localUsers.map((u) => u.id === id ? { ...u, role: nextRole } : u);
+    setLocalUsers(updated);
+    localStorage.setItem("nexmart-users-db", JSON.stringify(updated));
+  };
+
+  // Filtered lists
+  const filteredUsers = localUsers.filter((u) =>
+    u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
+
+  const filteredProducts = localProducts.filter((p) =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    p.brand.toLowerCase().includes(productSearch.toLowerCase())
+  );
 
   return (
     <>
@@ -46,7 +119,7 @@ export default function AdminDashboardPage() {
                 A
               </div>
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">System Admin</h3>
+                <h3 className="font-semibold text-text-primary text-sm">{user.name}</h3>
                 <span className="badge badge-primary text-[10px] py-0 mt-1">Super Admin</span>
               </div>
             </div>
@@ -210,21 +283,154 @@ export default function AdminDashboardPage() {
                 </div>
               )}
 
-              {/* User management fallback */}
+              {/* Dynamic User Management Table */}
               {activeTab === "users" && (
-                <div className="glass-card rounded-3xl border border-border p-8 bg-surface text-center py-12">
-                  <Users className="w-12 h-12 mx-auto text-text-muted mb-4" />
-                  <h3 className="font-display font-bold text-lg text-text-primary">User directory is active</h3>
-                  <p className="text-text-muted text-sm mt-1">Search, modify permissions, or block users from this interface.</p>
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h2 className="font-display font-bold text-xl text-text-primary flex items-center gap-2">
+                      <Users className="w-6 h-6 text-primary" /> Active User Directory
+                    </h2>
+                    
+                    {/* Search Bar */}
+                    <div className="flex items-center gap-2 bg-surface-2 rounded-xl border border-border px-3 py-2 text-xs">
+                      <Search className="w-4 h-4 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search name, email..."
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                        className="bg-transparent outline-none text-text-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-border bg-surface-2 text-text-muted font-bold uppercase tracking-wider">
+                            <th className="p-4">User</th>
+                            <th className="p-4">Role</th>
+                            <th className="p-4">Tier</th>
+                            <th className="p-4">Loyalty Points</th>
+                            <th className="p-4 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {filteredUsers.map((u) => (
+                            <tr key={u.id} className="hover:bg-surface-2/40 transition-colors">
+                              <td className="p-4">
+                                <p className="font-bold text-text-primary">{u.name}</p>
+                                <p className="text-text-muted text-[10px]">{u.email}</p>
+                              </td>
+                              <td className="p-4 capitalize">
+                                <span className={`badge text-[10px] ${u.role === "admin" ? "badge-warning" : u.role === "seller" ? "badge-primary" : "bg-surface-3 text-text-secondary"}`}>
+                                  {u.role}
+                                </span>
+                              </td>
+                              <td className="p-4 capitalize">{u.membershipLevel || "Bronze"}</td>
+                              <td className="p-4">{(u.loyaltyPoints || 0).toLocaleString()}</td>
+                              <td className="p-4 text-right flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleToggleRole(u.id, u.role)}
+                                  className="px-2 py-1 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg transition-all"
+                                  title="Cycle user role"
+                                >
+                                  Change Role
+                                </button>
+                                {u.email !== "admin@nexmart.com" && (
+                                  <button
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    className="p-1.5 bg-danger/10 text-danger hover:bg-danger hover:text-white rounded-lg transition-all"
+                                    title="Delete account"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          {filteredUsers.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-text-muted">No users matching search filters.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Inventory health fallback */}
+              {/* Dynamic Inventory / Product Table */}
               {activeTab === "inventory" && (
-                <div className="glass-card rounded-3xl border border-border p-8 bg-surface text-center py-12">
-                  <Package className="w-12 h-12 mx-auto text-text-muted mb-4" />
-                  <h3 className="font-display font-bold text-lg text-text-primary">Inventory database synchronized</h3>
-                  <p className="text-text-muted text-sm mt-1">Review catalog status, restocking cycles, and seller listing counts.</p>
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h2 className="font-display font-bold text-xl text-text-primary flex items-center gap-2">
+                      <Package className="w-6 h-6 text-primary" /> System Product Inventory
+                    </h2>
+                    
+                    {/* Search Bar */}
+                    <div className="flex items-center gap-2 bg-surface-2 rounded-xl border border-border px-3 py-2 text-xs">
+                      <Search className="w-4 h-4 text-text-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search product, brand..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="bg-transparent outline-none text-text-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-border bg-surface-2 text-text-muted font-bold uppercase tracking-wider">
+                            <th className="p-4">Product Name</th>
+                            <th className="p-4">SKU / Code</th>
+                            <th className="p-4">Price</th>
+                            <th className="p-4">Stock Status</th>
+                            <th className="p-4">Rating</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border/60">
+                          {filteredProducts.map((p) => (
+                            <tr key={p.id} className="hover:bg-surface-2/40 transition-colors">
+                              <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-lg overflow-hidden bg-surface-2 flex-shrink-0">
+                                    <img src={p.images[0]} alt="" className="w-full h-full object-cover" />
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-text-primary">{p.name}</p>
+                                    <p className="text-text-muted text-[10px]">{p.brand} · {p.category.name}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="p-4 font-mono text-[10px]">{p.sku}</td>
+                              <td className="p-4 font-bold">{formatCurrency(p.price)}</td>
+                              <td className="p-4">
+                                <span className={`badge text-[10px] ${p.stock > 10 ? "badge-primary" : p.stock > 0 ? "badge-warning" : "badge-danger"}`}>
+                                  {p.stock > 0 ? `${p.stock} units` : "Out of Stock"}
+                                </span>
+                              </td>
+                              <td className="p-4 flex items-center gap-1 font-semibold text-text-primary">
+                                <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                {p.rating}
+                              </td>
+                            </tr>
+                          ))}
+                          {filteredProducts.length === 0 && (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-text-muted">No products matching search filters.</td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
             </motion.div>

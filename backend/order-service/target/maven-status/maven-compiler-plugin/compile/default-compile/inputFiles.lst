@@ -1,0 +1,12 @@
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\client\InventoryClient.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\config\DbInitializer.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\controller\OrderController.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\dto\OrderRequest.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\entity\Coupon.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\entity\Order.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\entity\OrderItem.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\exception\GlobalExceptionHandler.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\OrderServiceApplication.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\repository\CouponRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\repository\OrderRepository.java
+D:\E-Commerce-Website-with-AI-Integration\backend\order-service\src\main\java\com\nexmart\order\service\OrderService.java

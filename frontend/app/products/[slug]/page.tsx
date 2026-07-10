@@ -508,7 +508,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                                       <span className="badge badge-success text-[7px] py-0.5 px-1.5">✓ VERIFIED</span>
                                     )}
                                   </div>
-                                  <span className="text-[10px] text-white/30">{new Date(review.createdAt).toLocaleDateString()}</span>
+                                  <span className="text-[10px] text-white/30" suppressHydrationWarning>{new Date(review.createdAt).toLocaleDateString()}</span>
                                 </div>
                               </div>
                               <div className="flex gap-0.5">

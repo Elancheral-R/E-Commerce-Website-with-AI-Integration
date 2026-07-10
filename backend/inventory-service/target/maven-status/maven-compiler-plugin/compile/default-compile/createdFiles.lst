@@ -1,0 +1,9 @@
+com\nexmart\inventory\repository\InventoryRepository.class
+com\nexmart\inventory\controller\InventoryController.class
+com\nexmart\inventory\entity\Inventory.class
+com\nexmart\inventory\service\InventoryService.class
+com\nexmart\inventory\entity\Inventory$InventoryBuilder.class
+com\nexmart\inventory\repository\InventoryReservationRepository.class
+com\nexmart\inventory\entity\InventoryReservation$InventoryReservationBuilder.class
+com\nexmart\inventory\InventoryServiceApplication.class
+com\nexmart\inventory\entity\InventoryReservation.class
