@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -37,12 +37,27 @@ const deliveryOptions = [
 ];
 
 interface ProductDetailPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
-  const product = mockProducts.find((p) => p.slug === params.slug);
-  if (!product) notFound();
+  const { slug } = use(params);
+  const [mounted, setMounted] = useState(false);
+  const [products, setProducts] = useState<any[]>(mockProducts);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nexmart-products");
+      if (stored) {
+        setProducts(JSON.parse(stored));
+      } else {
+        localStorage.setItem("nexmart-products", JSON.stringify(mockProducts));
+      }
+    }
+  }, []);
+
+  const product = products.find((p) => p.slug === slug);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -53,10 +68,21 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
   const { addItem, openCart } = useCartStore();
   const { toggleItem, isWishlisted } = useWishlistStore();
+  
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!product) notFound();
+
   const wishlisted = isWishlisted(product.id);
   const discount = getDiscountPercentage(product.originalPrice, product.price);
 
-  const relatedProducts = mockProducts
+  const relatedProducts = products
     .filter((p) => p.id !== product.id && p.category.id === product.category.id)
     .slice(0, 4);
 
@@ -165,7 +191,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
 
               {/* Thumbnails strip with Apple-inspired floating frame */}
               <div className="flex gap-3 overflow-x-auto py-2 pr-2 scrollbar-thin">
-                {product.images.map((img, i) => (
+                {product.images.map((img: string, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImage(i)}
@@ -453,10 +479,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                     <div className="md:col-span-7">
                       <h3 className="font-display font-black text-xl text-white mb-4">Specifications</h3>
                       <div className="grid gap-2">
-                        {Object.entries(product.specifications).map(([key, value]) => (
+                        {Object.entries(product.specifications as Record<string, string>).map(([key, value]) => (
                           <div key={key} className="flex gap-4 py-3 px-4 rounded-xl border border-white/5 bg-surface-2/30 items-center justify-between text-xs">
                             <span className="text-white/45 font-semibold">{key}</span>
-                            <span className="text-white font-bold">{value}</span>
+                            <span className="text-white font-bold">{String(value)}</span>
                           </div>
                         ))}
                       </div>

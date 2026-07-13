@@ -8,6 +8,14 @@ function setAuthCookies(isAuthenticated: boolean, role: string) {
   document.cookie = `nexmart-auth-role=${role}; path=/; expires=${expires}; SameSite=Lax`;
 }
 
+// ─── Cart Helpers ─────────────────────────────────────────────────────
+function clearCart() {
+  if (typeof window === "undefined") return;
+  // Clear the Zustand-persisted cart store and any ephemeral cart data
+  localStorage.removeItem("nexmart-cart");
+  localStorage.removeItem("nexmart-cart-guest");
+}
+
 function clearAuthCookies() {
   if (typeof document === "undefined") return;
   document.cookie = "nexmart-auth-status=false; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -71,7 +79,8 @@ interface AuthStore {
   registerUser: (
     name: string,
     email: string,
-    password: string
+    password: string,
+    role?: "customer" | "seller"
   ) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -130,6 +139,7 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: () => {
         clearAuthCookies();
+        clearCart();
         set({ user: null, token: null, isAuthenticated: false });
       },
 
@@ -167,6 +177,7 @@ export const useAuthStore = create<AuthStore>()(
               addresses: data.addresses || [],
             };
             setAuthCookies(true, user.role);
+            clearCart();
             set({ user, token: data.accessToken || data.token || "jwt-token", isAuthenticated: true, isLoading: false });
             return { success: true };
           }
@@ -201,6 +212,7 @@ export const useAuthStore = create<AuthStore>()(
 
         const user = storedUserToUser(found);
         setAuthCookies(true, found.role);
+        clearCart();
         set({
           user,
           token: `local-jwt-${found.id}`,
@@ -210,7 +222,7 @@ export const useAuthStore = create<AuthStore>()(
         return { success: true };
       },
 
-      registerUser: async (name, email, password) => {
+      registerUser: async (name, email, password, role: "customer" | "seller" = "customer") => {
         set({ isLoading: true });
 
         // 1. Try backend
@@ -218,7 +230,7 @@ export const useAuthStore = create<AuthStore>()(
           const res = await fetch("http://localhost:8081/api/v1/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password }),
+            body: JSON.stringify({ name, email, password, role }),
             signal: AbortSignal.timeout(3000),
           });
 
@@ -228,7 +240,7 @@ export const useAuthStore = create<AuthStore>()(
               id: data.userId || data.id || `u-${Date.now()}`,
               email: data.email || email,
               name: data.name || name,
-              role: "customer",
+              role: data.role || role,
               membershipLevel: "bronze",
               loyaltyPoints: 0,
               isEmailVerified: false,
@@ -236,7 +248,8 @@ export const useAuthStore = create<AuthStore>()(
               createdAt: new Date().toISOString(),
               addresses: [],
             };
-            setAuthCookies(true, "customer");
+            setAuthCookies(true, data.role || role);
+            clearCart();
             set({ user, token: data.accessToken || data.token || "jwt-token", isAuthenticated: true, isLoading: false });
             return { success: true };
           }
@@ -264,7 +277,7 @@ export const useAuthStore = create<AuthStore>()(
           email,
           name,
           passwordHash: password,
-          role: "customer",
+          role,
           membershipLevel: "bronze",
           loyaltyPoints: 0,
           createdAt: new Date().toISOString(),
@@ -273,7 +286,8 @@ export const useAuthStore = create<AuthStore>()(
         saveLocalUsers(users);
 
         const user = storedUserToUser(newUser);
-        setAuthCookies(true, "customer");
+        setAuthCookies(true, role);
+        clearCart();
         set({
           user,
           token: `local-jwt-${newUser.id}`,

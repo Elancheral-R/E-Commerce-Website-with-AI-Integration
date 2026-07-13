@@ -94,6 +94,12 @@ export function Header() {
   }, 280);
 
   const count = mounted ? itemCount() : 0;
+  const visibleNavLinks = navLinks.filter(link => {
+    if (link.href === "/sellers") {
+      return isAuthenticated && user?.role === "admin";
+    }
+    return true;
+  });
 
   return (
     <>
@@ -137,7 +143,7 @@ export function Header() {
 
               {/* Desktop Nav */}
               <nav className="hidden lg:flex items-center gap-0.5 ml-3">
-                {navLinks.map((link) => (
+                {visibleNavLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -228,7 +234,7 @@ export function Header() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-text-primary truncate group-hover:text-primary transition-colors">{product.name}</p>
-                                <p className="text-xs text-text-muted">{product.brand} · ₹{product.price.toLocaleString()}</p>
+                                <p className="text-xs text-text-muted">{product.brand} · ₹{product.price.toLocaleString("en-IN")}</p>
                               </div>
                               <ArrowRight className="w-3.5 h-3.5 text-text-muted group-hover:text-primary transition-colors flex-shrink-0" />
                             </Link>
@@ -487,7 +493,7 @@ export function Header() {
               </div>
 
               <nav className="px-4 space-y-1 pb-2">
-                {navLinks.map((link, i) => (
+                {visibleNavLinks.map((link, i) => (
                   <motion.div
                     key={link.href}
                     initial={{ opacity: 0, x: -16 }}

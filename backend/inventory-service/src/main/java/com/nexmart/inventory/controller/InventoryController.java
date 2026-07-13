@@ -11,7 +11,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/inventory")
 @RequiredArgsConstructor
-public class InventoryController {
+public class InventoryController 
+{
 
     private final InventoryService inventoryService;
 

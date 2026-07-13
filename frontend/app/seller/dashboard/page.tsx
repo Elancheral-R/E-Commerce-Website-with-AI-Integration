@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,22 +13,59 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { mockProducts, mockRevenueData } from "@/lib/mock-data";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store/auth";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend
 } from "recharts";
 
-const stats = [
-  { label: "Total Revenue", value: 342950, change: 12.5, type: "increase", icon: DollarSign, prefix: "₹" },
-  { label: "Orders Fulfilled", value: 1240, change: 8.2, type: "increase", icon: ShoppingBag },
-  { label: "Active Listings", value: 24, change: 0, type: "neutral", icon: Package },
-  { label: "Store Rating", value: 4.8, change: 0.1, type: "increase", icon: Star, suffix: "/5" },
-];
-
-const lowStockItems = mockProducts.filter((p) => p.stock < 20);
-
 export default function SellerDashboardPage() {
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "listings" | "orders" | "add-product">("overview");
+
+  // Local storage products list
+  const [localProducts, setLocalProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/auth/login?redirectTo=/seller/dashboard");
+    } else if (user?.role !== "seller" && user?.role !== "admin") {
+      router.replace("/");
+    }
+  }, [isAuthenticated, user, router]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nexmart-products");
+      if (stored) {
+        setLocalProducts(JSON.parse(stored));
+      } else {
+        localStorage.setItem("nexmart-products", JSON.stringify(mockProducts));
+        setLocalProducts(mockProducts);
+      }
+    }
+  }, []);
+
+  if (!isAuthenticated || (user?.role !== "seller" && user?.role !== "admin")) return null;
+
+  // Filter products belonging to this seller (e.g. user.id, or default s1 if user is rajesh u-3)
+  const sellerProducts = localProducts.filter((p) => {
+    return p.seller?.id === user?.id || (user?.id === "u-3" && p.seller?.id === "s1");
+  });
+
+  const lowStockItems = sellerProducts.filter((p) => p.stock < 20);
+  const activeListings = sellerProducts.length;
+  const avgRating = sellerProducts.length > 0
+    ? (sellerProducts.reduce((sum, p) => sum + p.rating, 0) / sellerProducts.length).toFixed(1)
+    : "5.0";
+
+  const dynamicStats = [
+    { label: "Total Revenue", value: sellerProducts.reduce((sum, p) => sum + p.price * 3, 0), change: 12.5, type: "increase", icon: DollarSign, prefix: "₹" },
+    { label: "Orders Fulfilled", value: sellerProducts.reduce((sum, p) => sum + p.stock, 0), change: 8.2, type: "increase", icon: ShoppingBag },
+    { label: "Active Listings", value: activeListings, change: 0, type: "neutral", icon: Package },
+    { label: "Store Rating", value: parseFloat(avgRating), change: 0.1, type: "increase", icon: Star, suffix: "/5" },
+  ];
 
   // Add Product Form State
   const [productForm, setProductForm] = useState({
@@ -43,6 +81,54 @@ export default function SellerDashboardPage() {
 
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newProduct = {
+      id: "p-new-" + Date.now(),
+      slug: productForm.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      name: productForm.name,
+      price: parseFloat(productForm.price),
+      originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : parseFloat(productForm.price),
+      discount: productForm.originalPrice ? Math.round(((parseFloat(productForm.originalPrice) - parseFloat(productForm.price)) / parseFloat(productForm.originalPrice)) * 100) : 0,
+      currency: "INR",
+      images: [
+        "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=90"
+      ],
+      category: {
+        id: productForm.category === "electronics" ? "1" : productForm.category === "fashion" ? "2" : productForm.category === "home-living" ? "3" : "4",
+        name: productForm.category.charAt(0).toUpperCase() + productForm.category.slice(1).replace("-", " & "),
+        slug: productForm.category
+      },
+      brand: productForm.brand,
+      seller: {
+        id: user?.id || "s1",
+        name: user?.name || "TechZone Official",
+        logo: "https://api.dicebear.com/7.x/shapes/svg?seed=" + (user?.name || "TechZone"),
+        rating: 4.8,
+        verified: true,
+        totalSales: 100,
+        joinedAt: new Date().toISOString().split("T")[0]
+      },
+      rating: 5.0,
+      reviewCount: 0,
+      stock: parseInt(productForm.stock),
+      sku: productForm.sku || "SKU-" + Date.now(),
+      description: productForm.description,
+      tags: [productForm.category, productForm.brand.toLowerCase()],
+      isFeatured: false,
+      isFlashSale: false,
+      isBestSeller: false,
+      isNew: true,
+      approved: false, // Pending admin approval
+      createdAt: new Date().toISOString()
+    };
+
+    const stored = localStorage.getItem("nexmart-products");
+    const currentList = stored ? JSON.parse(stored) : mockProducts;
+    const updated = [...currentList, newProduct];
+    
+    setLocalProducts(updated);
+    localStorage.setItem("nexmart-products", JSON.stringify(updated));
+
     alert("Product created successfully! Pending admin approval.");
     setProductForm({
       name: "",
@@ -55,6 +141,12 @@ export default function SellerDashboardPage() {
       sku: "",
     });
     setActiveTab("listings");
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    const updated = localProducts.filter((p) => p.id !== id);
+    setLocalProducts(updated);
+    localStorage.setItem("nexmart-products", JSON.stringify(updated));
   };
 
   return (
@@ -143,7 +235,7 @@ export default function SellerDashboardPage() {
                 <div className="space-y-8">
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {stats.map((s) => (
+                    {dynamicStats.map((s) => (
                       <div key={s.label} className="stat-card p-6">
                         <div className="flex items-center justify-between mb-4">
                           <span className="text-xs font-bold text-text-muted uppercase tracking-wider">{s.label}</span>
@@ -240,14 +332,24 @@ export default function SellerDashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {mockProducts.slice(0, 5).map((item) => (
+                      {sellerProducts.map((item) => (
                         <tr key={item.id}>
                           <td>
                             <div className="flex items-center gap-3">
                               <img src={item.images[0]} alt="" className="w-10 h-10 rounded-lg object-cover bg-surface-2" />
                               <div>
                                 <p className="font-semibold text-text-primary">{item.name}</p>
-                                <p className="text-xs text-text-muted">{item.brand}</p>
+                                <p className="text-xs text-text-muted flex flex-wrap items-center gap-1.5 mt-0.5">
+                                  <span>{item.brand}</span>
+                                  <span>•</span>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${
+                                    item.approved === false 
+                                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/25" 
+                                      : "bg-emerald-500/10 text-emerald-500 border border-emerald-500/25"
+                                  }`}>
+                                    {item.approved === false ? "Pending Admin Approval" : "Live"}
+                                  </span>
+                                </p>
                               </div>
                             </div>
                           </td>
@@ -259,16 +361,24 @@ export default function SellerDashboardPage() {
                           <td className="font-mono text-xs text-text-muted">{item.sku}</td>
                           <td>
                             <div className="flex gap-2">
-                              <button className="p-2 rounded-lg bg-surface-2 hover:bg-primary/20 text-text-muted hover:text-primary transition-all">
+                              <Link href={`/products/${item.slug}`} className="p-2 rounded-lg bg-surface-2 hover:bg-primary/20 text-text-muted hover:text-primary transition-all flex items-center justify-center">
                                 <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 rounded-lg bg-surface-2 hover:bg-danger/10 text-text-muted hover:text-danger transition-all">
+                              </Link>
+                              <button
+                                onClick={() => handleDeleteProduct(item.id)}
+                                className="p-2 rounded-lg bg-surface-2 hover:bg-danger/10 text-text-muted hover:text-danger transition-all flex items-center justify-center"
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
                           </td>
                         </tr>
                       ))}
+                      {sellerProducts.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="p-8 text-center text-text-muted">You have no listings yet. Create one!</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

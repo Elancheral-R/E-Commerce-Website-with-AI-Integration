@@ -4,13 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Zap, Mail, Phone, MapPin, ArrowRight, Check, Sparkles } from "lucide-react";
+import { useAuthStore } from "@/lib/store/auth";
 
 const footerLinks = {
   Platform: [
     { label: "Products", href: "/products" },
     { label: "Flash Sales", href: "/flash-sales" },
     { label: "AI Assistant", href: "/ai-assistant" },
-    { label: "Seller Hub", href: "/sellers" },
+    { label: "Seller Hub", href: "/seller/dashboard" },
     { label: "Gift Cards", href: "/gift-cards" },
   ],
   "Support": [
@@ -195,26 +196,37 @@ export function Footer() {
           </div>
 
           {/* Links */}
-          {Object.entries(footerLinks).map(([section, links]) => (
-            <div key={section}>
-              <h4 className="font-bold text-text-primary mb-4 text-xs uppercase tracking-[0.1em]">
-                {section}
-              </h4>
-              <ul className="space-y-2.5">
-                {links.map((link) => (
-                  <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-text-muted hover:text-primary transition-colors duration-150 hover:translate-x-0.5 inline-flex items-center gap-1 group"
-                    >
-                      <span className="w-0 group-hover:w-1.5 h-0.5 rounded-full bg-primary transition-all duration-200 flex-shrink-0" />
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {Object.entries(footerLinks).map(([section, links]) => {
+            const { user, isAuthenticated } = useAuthStore();
+            const isAdmin = isAuthenticated && user?.role === "admin";
+            const filteredLinks = links.filter((link) => {
+              if (link.label === "Seller Hub") {
+                return isAdmin;
+              }
+              return true;
+            });
+
+            return (
+              <div key={section}>
+                <h4 className="font-bold text-text-primary mb-4 text-xs uppercase tracking-[0.1em]">
+                  {section}
+                </h4>
+                <ul className="space-y-2.5">
+                  {filteredLinks.map((link) => (
+                    <li key={link.href}>
+                      <Link
+                        href={link.href}
+                        className="text-sm text-text-muted hover:text-primary transition-colors duration-150 hover:translate-x-0.5 inline-flex items-center gap-1 group"
+                      >
+                        <span className="w-0 group-hover:w-1.5 h-0.5 rounded-full bg-primary transition-all duration-200 flex-shrink-0" />
+                        {link.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
         {/* Bottom Bar */}

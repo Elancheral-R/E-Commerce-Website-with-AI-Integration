@@ -199,10 +199,23 @@ export default function ProductsPage() {
   const [page, setPage] = useState(1);
   const { ref: loadMoreRef, inView } = useInView();
 
+  const [mounted, setMounted] = useState(false);
+  const [products, setProducts] = useState<any[]>(mockProducts);
+
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nexmart-products");
+      if (stored) {
+        setProducts(JSON.parse(stored));
+      }
+    }
+  }, []);
+
   const PAGE_SIZE = 8;
 
   // Filter and sort products
-  const filteredProducts = mockProducts.filter((p) => {
+  const filteredProducts = products.filter((p) => {
     if (filters.category && p.category.slug !== filters.category) return false;
     if (filters.minPrice && p.price < filters.minPrice) return false;
     if (filters.maxPrice && p.price > filters.maxPrice) return false;
@@ -230,6 +243,19 @@ export default function ProductsPage() {
   }, [inView]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  if (!mounted) {
+    return (
+      <>
+        <Header />
+        <CartDrawer />
+        <main className="min-h-screen bg-background pt-28 pb-16 flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>

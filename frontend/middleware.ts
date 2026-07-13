@@ -19,12 +19,10 @@ const SELLER_ROUTES = [
   "/seller",
 ];
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Read auth state from Zustand's persisted cookie/localStorage
-  // Zustand persist writes to localStorage — we read it from the cookie store approach:
-  // Since Next.js middleware can't read localStorage, we store a simple auth cookie on login.
+  // Read auth state from cookies
   const authCookie = request.cookies.get("nexmart-auth-status");
   const roleCookie = request.cookies.get("nexmart-auth-role");
 
@@ -32,7 +30,7 @@ export function proxy(request: NextRequest) {
   const userRole = roleCookie?.value || "customer";
 
   // Check admin-only routes
-  if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (ADMIN_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
     if (!isAuthenticated) {
       const url = new URL("/auth/login", request.url);
       url.searchParams.set("redirectTo", pathname);
@@ -45,7 +43,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Check seller-only routes
-  if (SELLER_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (SELLER_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
     if (!isAuthenticated) {
       const url = new URL("/auth/login", request.url);
       url.searchParams.set("redirectTo", pathname);
@@ -57,7 +55,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Check general protected routes
-  if (PROTECTED_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (PROTECTED_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
     if (!isAuthenticated) {
       const url = new URL("/auth/login", request.url);
       url.searchParams.set("redirectTo", pathname);

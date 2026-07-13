@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [role, setRole] = useState<"customer" | "seller">("customer");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,9 +36,13 @@ export default function RegisterPage() {
       return;
     }
     setError("");
-    const result = await registerUser(name, email, password);
+    const result = await registerUser(name, email, password, role);
     if (result.success) {
-      router.push("/");
+      if (role === "seller") {
+        router.push("/seller/dashboard");
+      } else {
+        router.push("/");
+      }
     } else {
       setError(result.error || "Registration failed. Please try again.");
     }
@@ -70,6 +75,34 @@ export default function RegisterPage() {
                   {error}
                 </motion.p>
               )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-text-secondary uppercase">Account Type</label>
+                <div className="grid grid-cols-2 gap-2 bg-surface-2 p-1.5 rounded-xl border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setRole("customer")}
+                    className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                      role === "customer"
+                        ? "bg-primary text-white shadow-md animate-none"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    Customer (Buyer)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRole("seller")}
+                    className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                      role === "seller"
+                        ? "bg-primary text-white shadow-md animate-none"
+                        : "text-text-secondary hover:text-text-primary"
+                    }`}
+                  >
+                    Seller (Merchant)
+                  </button>
+                </div>
+              </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-text-secondary uppercase" htmlFor="register-name">Full Name</label>

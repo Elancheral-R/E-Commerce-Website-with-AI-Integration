@@ -144,14 +144,14 @@ function ProductShowcase() {
                     <Star key={s} className={`w-3.5 h-3.5 ${s <= Math.round(featured.rating) ? "fill-accent text-accent" : "fill-surface-3 text-surface-3"}`} />
                   ))}
                 </div>
-                <span className="text-xs text-white/50">{featured.rating} ({featured.reviewCount.toLocaleString()})</span>
+                <span className="text-xs text-white/50">{featured.rating} ({featured.reviewCount.toLocaleString("en-IN")})</span>
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="font-display font-bold text-2xl text-white">₹{featured.price.toLocaleString()}</span>
+                  <span className="font-display font-bold text-2xl text-white">₹{featured.price.toLocaleString("en-IN")}</span>
                   {featured.originalPrice > featured.price && (
-                    <span className="text-white/40 text-sm line-through ml-2">₹{featured.originalPrice.toLocaleString()}</span>
+                    <span className="text-white/40 text-sm line-through ml-2">₹{featured.originalPrice.toLocaleString("en-IN")}</span>
                   )}
                 </div>
                 <div className="flex gap-2">

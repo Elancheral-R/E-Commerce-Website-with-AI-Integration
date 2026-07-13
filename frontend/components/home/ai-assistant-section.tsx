@@ -85,7 +85,7 @@ function ChatMessage({ msg, visible }: { msg: typeof demoConversation[0], visibl
             <div className="flex-1 min-w-0">
               <p className="text-[10px] text-primary font-black uppercase tracking-wider">{msg.product.brand}</p>
               <p className="text-xs font-semibold text-text-primary line-clamp-2 mt-0.5">{msg.product.name}</p>
-              <p className="text-sm font-bold text-primary mt-1">₹{msg.product.price.toLocaleString()}</p>
+              <p className="text-sm font-bold text-primary mt-1">₹{msg.product.price.toLocaleString("en-IN")}</p>
             </div>
           </div>
         )}
