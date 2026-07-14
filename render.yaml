@@ -1,7 +1,7 @@
 databases:
   - name: nexmart-postgres
-    databaseName: nexmart_dev
-    user: postgres
+    databaseName: ecommerce
+    user: postgre
     plan: free
 
 services:
@@ -28,7 +28,7 @@ services:
       - key: DB_NAME
         fromDatabase:
           name: nexmart-postgres
-          property: databaseName
+          property: database
       - key: DB_USER
         fromDatabase:
           name: nexmart-postgres
