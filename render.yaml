@@ -11,7 +11,7 @@ services:
     plan: free
     runtime: docker
     dockerContext: backend
-    dockerfilePath: auth-service/Dockerfile
+    dockerfilePath: backend/auth-service/Dockerfile
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: docker
