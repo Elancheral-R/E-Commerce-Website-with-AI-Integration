@@ -24,6 +24,8 @@ function clearAuthCookies() {
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
 
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+
 // ─── Local Users Database ────────────────────────────────────────────
 // This persists in localStorage to simulate a real user DB when the backend is offline.
 // The default admin account is always seeded here.
@@ -155,7 +157,7 @@ export const useAuthStore = create<AuthStore>()(
 
         // 1. Try backend auth-service first
         try {
-          const res = await fetch("http://localhost:8081/api/v1/auth/login", {
+          const res = await fetch(`${BACKEND_API_URL}/api/v1/auth/login`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
@@ -227,7 +229,7 @@ export const useAuthStore = create<AuthStore>()(
 
         // 1. Try backend
         try {
-          const res = await fetch("http://localhost:8081/api/v1/auth/register", {
+          const res = await fetch(`${BACKEND_API_URL}/api/v1/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ name, email, password, role }),

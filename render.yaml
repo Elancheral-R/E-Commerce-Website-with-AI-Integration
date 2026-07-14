@@ -1,0 +1,217 @@
+databases:
+  - name: nexmart-postgres
+    databaseName: nexmart_dev
+    user: postgres
+    plan: free
+
+services:
+  # Managed Redis Cache Storage
+  - type: redis
+    name: nexmart-redis
+    plan: free
+    ipAllowList: [] # Allow all internal connections
+
+  # 1. Discovery Service (Eureka)
+  - type: pservice
+    name: discovery-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: discovery-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+
+  # 2. API Gateway (Public-facing Web Service)
+  - type: web
+    name: gateway-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: gateway-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 3. Auth Service (Private Service)
+  - type: pservice
+    name: auth-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: auth-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: DB_HOST
+        fromDatabase:
+          name: nexmart-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nexmart-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nexmart-postgres
+          property: databaseName
+      - key: DB_USER
+        fromDatabase:
+          name: nexmart-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nexmart-postgres
+          property: password
+      - key: DB_URL
+        value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 4. Product Catalog Service (Private Service)
+  - type: pservice
+    name: product-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: product-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: DB_HOST
+        fromDatabase:
+          name: nexmart-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nexmart-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nexmart-postgres
+          property: databaseName
+      - key: DB_USER
+        fromDatabase:
+          name: nexmart-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nexmart-postgres
+          property: password
+      - key: DB_URL
+        value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - key: SPRING_DATA_REDIS_HOST
+        value: nexmart-redis
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 5. Inventory Service (Private Service)
+  - type: pservice
+    name: inventory-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: inventory-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: DB_HOST
+        fromDatabase:
+          name: nexmart-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nexmart-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nexmart-postgres
+          property: databaseName
+      - key: DB_USER
+        fromDatabase:
+          name: nexmart-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nexmart-postgres
+          property: password
+      - key: DB_URL
+        value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 6. Order Processing Service (Private Service)
+  - type: pservice
+    name: order-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: order-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: DB_HOST
+        fromDatabase:
+          name: nexmart-postgres
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: nexmart-postgres
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: nexmart-postgres
+          property: databaseName
+      - key: DB_USER
+        fromDatabase:
+          name: nexmart-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: nexmart-postgres
+          property: password
+      - key: DB_URL
+        value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 7. AI Assistant & Dynamic Pricing Service (Private Service)
+  - type: pservice
+    name: ai-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: ai-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 8. Notification Dispatcher Service (Private Service)
+  - type: pservice
+    name: notification-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: notification-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
+
+  # 9. Business Analytics Service (Private Service)
+  - type: pservice
+    name: analytics-service
+    plan: free
+    runtime: docker
+    dockerContext: backend
+    dockerfilePath: analytics-service/Dockerfile
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+        value: http://discovery-service:8761/eureka/
