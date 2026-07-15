@@ -72,7 +72,7 @@ export function FlashSaleSection() {
   return (
     <section className="py-24 relative overflow-hidden">
       {/* Dark dramatic background for this section */}
-      <div className="absolute inset-0 bg-[#0a0812]" />
+      <div className="absolute inset-0 bg-surface-3" />
       {/* Red/orange ambient glow */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[400px] rounded-full blur-3xl opacity-20 pointer-events-none"
         style={{ background: "radial-gradient(circle, rgb(239 68 68 / 0.4) 0%, transparent 65%)" }} />

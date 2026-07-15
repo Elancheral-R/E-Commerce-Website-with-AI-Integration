@@ -74,7 +74,7 @@ export default function CheckoutPage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#06060a] pt-32 pb-24 relative overflow-hidden">
+      <main className="min-h-screen bg-background pt-32 pb-24 relative overflow-hidden">
         {/* Ambient Lights */}
         <div className="absolute top-20 right-10 w-[500px] h-[500px] rounded-full blur-3xl opacity-[0.05] pointer-events-none bg-gradient-to-br from-primary to-secondary" />
         <div className="absolute inset-0 dot-grid opacity-20 pointer-events-none" />

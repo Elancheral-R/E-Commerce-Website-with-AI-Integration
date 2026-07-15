@@ -86,13 +86,13 @@ export function ProductCard({ product, variant = "default", index = 0 }: Product
     >
       <Link href={`/products/${product.slug}`}>
         <motion.div
-          animate={{ y: hovered ? -6 : 0 }}
+          animate={{ y: hovered ? -4 : 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 25 }}
           className={cn(
             "relative bg-surface border rounded-2xl overflow-hidden transition-all duration-300",
             hovered
-              ? "border-primary/20 shadow-[0_20px_50px_-8px_rgb(99_102_241/0.2),0_8px_20px_-4px_rgb(0_0_0/0.15)]"
-              : "border-border shadow-card"
+              ? "border-primary/45 shadow-md"
+              : "border-border shadow-sm"
           )}
         >
           {/* Image Area */}
@@ -131,8 +131,8 @@ export function ProductCard({ product, variant = "default", index = 0 }: Product
 
             {/* Discount badge — top right */}
             {discount > 0 && (
-              <div className="absolute top-3 right-3 w-11 h-11 rounded-full bg-gradient-to-br from-success to-emerald-400 flex items-center justify-center shadow-lg z-10">
-                <span className="text-white text-[9px] font-black text-center leading-tight">-{discount}%</span>
+              <div className="absolute top-3 right-3 w-10 h-10 rounded-full bg-success flex items-center justify-center shadow z-10">
+                <span className="text-white text-[10px] font-bold text-center leading-tight">-{discount}%</span>
               </div>
             )}
 
@@ -195,7 +195,7 @@ export function ProductCard({ product, variant = "default", index = 0 }: Product
                       </motion.span>
                     </AnimatePresence>
                   </button>
-                  <button className="w-10 h-10 flex-shrink-0 rounded-xl bg-surface/85 backdrop-blur-sm flex items-center justify-center border border-white/20 hover:bg-white hover:text-primary transition-all text-text-secondary shadow-lg">
+                  <button className="w-10 h-10 flex-shrink-0 rounded-xl bg-surface border border-border flex items-center justify-center hover:bg-surface-2 hover:text-primary transition-all text-text-secondary shadow-sm">
                     <Eye className="w-4 h-4" />
                   </button>
                 </motion.div>
@@ -205,7 +205,7 @@ export function ProductCard({ product, variant = "default", index = 0 }: Product
 
           {/* Content */}
           <div className="p-4">
-            <p className="text-[10px] text-primary font-black uppercase tracking-[0.1em] mb-1">
+            <p className="text-[10px] text-primary font-bold uppercase tracking-[0.1em] mb-1">
               {product.brand}
             </p>
             <h3 className="font-semibold text-text-primary text-sm line-clamp-2 group-hover:text-primary transition-colors leading-snug mb-2.5">
@@ -259,8 +259,8 @@ export function ProductCard({ product, variant = "default", index = 0 }: Product
                     className={cn(
                       "h-full rounded-full",
                       product.stock < 10
-                        ? "bg-gradient-to-r from-danger to-orange-400"
-                        : "bg-gradient-to-r from-success to-emerald-400"
+                        ? "bg-danger"
+                        : "bg-success"
                     )}
                   />
                 </div>

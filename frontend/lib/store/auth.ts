@@ -82,7 +82,8 @@ interface AuthStore {
     name: string,
     email: string,
     password: string,
-    role?: "customer" | "seller"
+    role?: "customer" | "seller",
+    phone?: string
   ) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -166,17 +167,19 @@ export const useAuthStore = create<AuthStore>()(
 
           if (res.ok) {
             const data = await res.json();
+            // Backend returns: { accessToken, refreshToken, user: { id, email, name, role, ... } }
+            const u = data.user || data;
             const user: User = {
-              id: data.userId || data.id || `u-${Date.now()}`,
-              email: data.email || email,
-              name: data.name || email.split("@")[0],
-              role: data.role || "customer",
-              membershipLevel: data.membershipLevel || "bronze",
-              loyaltyPoints: data.loyaltyPoints || 0,
+              id: u.id?.toString() || `u-${Date.now()}`,
+              email: u.email || email,
+              name: u.name || email.split("@")[0],
+              role: (u.role || "CUSTOMER").toLowerCase() as User["role"],
+              membershipLevel: (u.membershipLevel || "bronze").toLowerCase() as User["membershipLevel"],
+              loyaltyPoints: u.loyaltyPoints || 0,
               isEmailVerified: true,
               isTwoFactorEnabled: false,
-              createdAt: data.createdAt || new Date().toISOString(),
-              addresses: data.addresses || [],
+              createdAt: u.createdAt || new Date().toISOString(),
+              addresses: u.addresses || [],
             };
             setAuthCookies(true, user.role);
             clearCart();
@@ -184,13 +187,33 @@ export const useAuthStore = create<AuthStore>()(
             return { success: true };
           }
 
+          let backendError = "";
           if (res.status === 401) {
-            set({ isLoading: false });
-            return { success: false, error: "Invalid email or password." };
+            backendError = "Invalid email or password.";
+          } else if (res.status === 404) {
+            backendError = "Account not found. Please register first.";
           }
-          if (res.status === 404) {
+
+          if (backendError) {
+            // Check if user is available locally as a fallback before returning the error
+            const users = getLocalUsers();
+            const found = users.find(
+              (u) => u.email.toLowerCase() === email.toLowerCase()
+            );
+            if (found && found.passwordHash === password) {
+              const user = storedUserToUser(found);
+              setAuthCookies(true, found.role);
+              clearCart();
+              set({
+                user,
+                token: `local-jwt-${found.id}`,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+              return { success: true };
+            }
             set({ isLoading: false });
-            return { success: false, error: "Account not found. Please register first." };
+            return { success: false, error: backendError };
           }
         } catch {
           // Backend unavailable — fall through to local DB
@@ -224,7 +247,7 @@ export const useAuthStore = create<AuthStore>()(
         return { success: true };
       },
 
-      registerUser: async (name, email, password, role: "customer" | "seller" = "customer") => {
+      registerUser: async (name, email, password, role: "customer" | "seller" = "customer", phone = "") => {
         set({ isLoading: true });
 
         // 1. Try backend
@@ -232,17 +255,19 @@ export const useAuthStore = create<AuthStore>()(
           const res = await fetch(`${BACKEND_API_URL}/api/v1/auth/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, password, role }),
+            body: JSON.stringify({ name, email, password, role, phone }),
             signal: AbortSignal.timeout(3000),
           });
 
           if (res.ok) {
             const data = await res.json();
+            // Backend returns: { accessToken, refreshToken, user: { id, email, name, role, ... } }
+            const u = data.user || data;
             const user: User = {
-              id: data.userId || data.id || `u-${Date.now()}`,
-              email: data.email || email,
-              name: data.name || name,
-              role: data.role || role,
+              id: u.id?.toString() || `u-${Date.now()}`,
+              email: u.email || email,
+              name: u.name || name,
+              role: (u.role || "CUSTOMER").toLowerCase() as User["role"],
               membershipLevel: "bronze",
               loyaltyPoints: 0,
               isEmailVerified: false,
@@ -250,7 +275,7 @@ export const useAuthStore = create<AuthStore>()(
               createdAt: new Date().toISOString(),
               addresses: [],
             };
-            setAuthCookies(true, data.role || role);
+            setAuthCookies(true, user.role);
             clearCart();
             set({ user, token: data.accessToken || data.token || "jwt-token", isAuthenticated: true, isLoading: false });
             return { success: true };

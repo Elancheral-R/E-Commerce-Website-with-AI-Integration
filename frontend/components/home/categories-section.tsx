@@ -21,10 +21,10 @@ export function CategoriesSection() {
   const rest = mockCategories.slice(1, 7);
 
   return (
-    <section className="py-24 bg-surface-2 relative overflow-hidden">
+    <section className="py-20 bg-background relative overflow-hidden">
       {/* Background accent */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgb(99 102 241 / 0.15) 0%, transparent 65%)" }} />
+        style={{ background: "radial-gradient(circle, rgba(37, 99, 235, 0.08) 0%, transparent 65%)" }} />
 
       <div className="max-w-[1400px] mx-auto px-4 md:px-8">
         {/* Header */}
@@ -49,7 +49,7 @@ export function CategoriesSection() {
                   whileInView={{ scaleX: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                  className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-gradient-to-r from-primary to-secondary origin-left block"
+                  className="absolute -bottom-1 left-0 right-0 h-[2.5px] rounded-full bg-primary origin-left block"
                 />
               </span>
             </h2>
@@ -85,10 +85,9 @@ export function CategoriesSection() {
                   style={{ transform: "scale(1)", willChange: "transform" }}
                 />
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                 <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
-                  style={{ background: `linear-gradient(to top, ${featured.color}80 0%, transparent 60%)` }}
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-400 bg-slate-900/40"
                 />
 
                 {/* Content */}
@@ -122,10 +121,9 @@ export function CategoriesSection() {
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   {/* Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                   <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: `linear-gradient(to top, ${category.color}70 0%, transparent 60%)` }}
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-slate-900/30"
                   />
 
                   {/* Content */}

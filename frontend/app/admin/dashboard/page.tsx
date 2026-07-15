@@ -8,7 +8,7 @@ import {
   LayoutDashboard, ShoppingBag, Users, ShieldAlert, Sparkles, TrendingUp,
   AlertTriangle, DollarSign, Package, Settings, LogOut, ChevronRight,
   Eye, RefreshCw, BarChart2, Star, CheckCircle, XCircle, Search, Edit, Trash2,
-  Plus, Shield, Check
+  Plus, Shield, Check, FileText, BookOpen, PenSquare
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -42,10 +42,21 @@ export default function AdminDashboardPage() {
   const [localUsers, setLocalUsers] = useState<any[]>([]);
   const [localProducts, setLocalProducts] = useState<any[]>([]);
   const [localCategories, setLocalCategories] = useState<any[]>([]);
+  const [sellerApplications, setSellerApplications] = useState<any[]>([]);
 
   // Search filter states
   const [userSearch, setUserSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
+
+  // Product creator sub-tab
+  const [productCreatorTab, setProductCreatorTab] = useState<"new" | "catalogues" | "edit">("new");
+  // Catalogue state
+  const [localCatalogues, setLocalCatalogues] = useState<any[]>([]);
+  const [catalogueForm, setCatalogueForm] = useState({ name: "", description: "", image: "" });
+  const [catalogueProductSearch, setCatalogueProductSearch] = useState("");
+  const [selectedCatalogueId, setSelectedCatalogueId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [editProductForm, setEditProductForm] = useState<any>({});
 
   // Role Gate check
   useEffect(() => {
@@ -98,6 +109,14 @@ export default function AdminDashboardPage() {
         localStorage.setItem("nexmart-categories", JSON.stringify(mockCategories));
         setLocalCategories(mockCategories);
       }
+
+      // 4. Load seller applications
+      const apps = localStorage.getItem("nexmart-seller-applications");
+      setSellerApplications(apps ? JSON.parse(apps) : []);
+
+      // 5. Load catalogues
+      const cats = localStorage.getItem("nexmart-catalogues");
+      setLocalCatalogues(cats ? JSON.parse(cats) : []);
     }
   }, []);
 
@@ -163,6 +182,98 @@ export default function AdminDashboardPage() {
     setLocalProducts(updated);
     localStorage.setItem("nexmart-products", JSON.stringify(updated));
     alert("Product rejected and deleted.");
+  };
+
+  // ── Seller Application Handlers ──
+  const handleApproveApplication = (appId: string, userId: string) => {
+    // Update application status
+    const updatedApps = sellerApplications.map((a) =>
+      a.id === appId ? { ...a, status: "approved" } : a
+    );
+    setSellerApplications(updatedApps);
+    localStorage.setItem("nexmart-seller-applications", JSON.stringify(updatedApps));
+
+    // Promote user role to seller with 10% commission
+    const users = JSON.parse(localStorage.getItem("nexmart-users-db") || "[]");
+    const updatedUsers = users.map((u: any) =>
+      u.id === userId ? { ...u, role: "seller", commissionRate: 10 } : u
+    );
+    localStorage.setItem("nexmart-users-db", JSON.stringify(updatedUsers));
+    setLocalUsers(updatedUsers);
+    alert("Seller approved! They can now list products with 10% commission.");
+  };
+
+  const handleRejectApplication = (appId: string, userId: string) => {
+    const updatedApps = sellerApplications.map((a) =>
+      a.id === appId ? { ...a, status: "rejected" } : a
+    );
+    setSellerApplications(updatedApps);
+    localStorage.setItem("nexmart-seller-applications", JSON.stringify(updatedApps));
+
+    // Revert user back to customer
+    const users = JSON.parse(localStorage.getItem("nexmart-users-db") || "[]");
+    const updatedUsers = users.map((u: any) =>
+      u.id === userId ? { ...u, role: "customer" } : u
+    );
+    localStorage.setItem("nexmart-users-db", JSON.stringify(updatedUsers));
+    setLocalUsers(updatedUsers);
+    alert("Application rejected. User reverted to customer.");
+  };
+
+  // ── Catalogue Handlers ──
+  const handleCreateCatalogue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catalogueForm.name) { alert("Catalogue name required."); return; }
+    const newCat = {
+      id: `cat-${Date.now()}`,
+      name: catalogueForm.name,
+      description: catalogueForm.description,
+      image: catalogueForm.image || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
+      productIds: [] as string[],
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...localCatalogues, newCat];
+    setLocalCatalogues(updated);
+    localStorage.setItem("nexmart-catalogues", JSON.stringify(updated));
+    setCatalogueForm({ name: "", description: "", image: "" });
+    alert("Catalogue created!");
+  };
+
+  const handleToggleProductInCatalogue = (catId: string, productId: string) => {
+    const updated = localCatalogues.map((c) => {
+      if (c.id !== catId) return c;
+      const ids: string[] = c.productIds || [];
+      return {
+        ...c,
+        productIds: ids.includes(productId)
+          ? ids.filter((id: string) => id !== productId)
+          : [...ids, productId],
+      };
+    });
+    setLocalCatalogues(updated);
+    localStorage.setItem("nexmart-catalogues", JSON.stringify(updated));
+  };
+
+  const handleDeleteCatalogue = (catId: string) => {
+    const updated = localCatalogues.filter((c) => c.id !== catId);
+    setLocalCatalogues(updated);
+    localStorage.setItem("nexmart-catalogues", JSON.stringify(updated));
+  };
+
+  // ── Product Editor Handlers ──
+  const startEditProduct = (p: any) => {
+    setEditingProduct(p);
+    setEditProductForm({ ...p });
+  };
+
+  const handleSaveEditProduct = () => {
+    const updated = localProducts.map((p) =>
+      p.id === editingProduct.id ? { ...p, ...editProductForm } : p
+    );
+    setLocalProducts(updated);
+    localStorage.setItem("nexmart-products", JSON.stringify(updated));
+    setEditingProduct(null);
+    alert("Product updated successfully!");
   };
 
   const handleToggleFlashSale = (id: string, currentStatus: boolean) => {
@@ -616,13 +727,99 @@ export default function AdminDashboardPage() {
                 const pendingProducts = localProducts.filter((p) => !p.approved);
                 const approvedSellerProducts = localProducts.filter((p) => p.approved && p.seller?.id !== "admin-001");
                 const sellers = localUsers.filter((u) => u.role === "seller");
+                const pendingApplications = sellerApplications.filter((a) => a.status === "pending");
                 return (
                   <div className="space-y-8">
                     <div className="flex items-center gap-3">
                       <Shield className="w-6 h-6 text-primary" />
                       <h2 className="font-display font-bold text-xl text-text-primary">Seller &amp; Product Approvals</h2>
-                      {pendingProducts.length > 0 && (
-                        <span className="badge badge-warning text-[10px]">{pendingProducts.length} Pending</span>
+                      {(pendingApplications.length + pendingProducts.length) > 0 && (
+                        <span className="badge badge-warning text-[10px]">{pendingApplications.length + pendingProducts.length} Pending</span>
+                      )}
+                    </div>
+
+                    {/* ── KYC Applications ── */}
+                    <div className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                      <div className="p-5 border-b border-border flex items-center justify-between">
+                        <h3 className="font-semibold text-text-primary text-sm flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-warning" />
+                          Pending Seller KYC Applications ({pendingApplications.length})
+                        </h3>
+                        <span className="text-[10px] text-text-muted">10% commission on approval</span>
+                      </div>
+
+                      {pendingApplications.length === 0 ? (
+                        <div className="p-10 text-center">
+                          <CheckCircle className="w-10 h-10 text-success mx-auto mb-3 opacity-50" />
+                          <p className="text-text-muted text-xs font-semibold">No pending KYC applications.</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border/60">
+                          {pendingApplications.map((app) => (
+                            <div key={app.id} className="p-5 hover:bg-surface-2/30 transition-colors">
+                              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div className="space-y-3 flex-1">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center font-bold text-primary text-sm flex-shrink-0">
+                                      {app.userName?.[0]?.toUpperCase() || "S"}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-text-primary text-sm">{app.userName}</p>
+                                      <p className="text-text-muted text-[11px]">{app.userEmail}</p>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {[
+                                      ["Business", app.businessName],
+                                      ["Type", app.businessType],
+                                      ["GST", app.gstNumber],
+                                      ["PAN", app.panNumber],
+                                      ["Bank", app.bankName],
+                                      ["IFSC", app.ifscCode],
+                                    ].map(([label, val]) => (
+                                      <div key={label} className="text-xs">
+                                        <span className="text-text-muted font-semibold block">{label}</span>
+                                        <span className="text-text-primary font-bold capitalize">{val || "—"}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <div className="flex gap-2 text-[10px]">
+                                    {app.aadhaarImageUrl && (
+                                      <a href={app.aadhaarImageUrl} target="_blank" rel="noopener noreferrer"
+                                        className="px-2 py-1 rounded bg-primary/10 text-primary font-bold hover:underline">
+                                        📄 Aadhaar Doc
+                                      </a>
+                                    )}
+                                    {app.panImageUrl && (
+                                      <a href={app.panImageUrl} target="_blank" rel="noopener noreferrer"
+                                        className="px-2 py-1 rounded bg-primary/10 text-primary font-bold hover:underline">
+                                        📄 PAN Doc
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <div className="p-3 rounded-xl bg-success/5 border border-success/15 text-center">
+                                    <p className="text-[10px] font-black text-success uppercase">Commission</p>
+                                    <p className="font-display font-bold text-2xl text-success">10%</p>
+                                  </div>
+                                  <button
+                                    onClick={() => handleApproveApplication(app.id, app.userId)}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-success/10 text-success hover:bg-success hover:text-white rounded-xl text-xs font-bold transition-all"
+                                  >
+                                    <CheckCircle className="w-3.5 h-3.5" /> Approve Seller
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectApplication(app.id, app.userId)}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-danger/10 text-danger hover:bg-danger hover:text-white rounded-xl text-xs font-bold transition-all"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" /> Reject
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
 
@@ -792,15 +989,40 @@ export default function AdminDashboardPage() {
 
               {/* ── WordPress-like Product Creator Tab ── */}
               {activeTab === "create-product" && (
-                <div className="space-y-6 max-w-3xl">
+                <div className="space-y-6">
                   <div className="flex items-center gap-3">
                     <Plus className="w-6 h-6 text-primary" />
                     <div>
-                      <h2 className="font-display font-bold text-xl text-text-primary">Product Creator</h2>
-                      <p className="text-text-muted text-xs mt-0.5">Publish directly to the customer catalog — no approval required.</p>
+                      <h2 className="font-display font-bold text-xl text-text-primary">Product Manager</h2>
+                      <p className="text-text-muted text-xs mt-0.5">Create products, manage catalogues, or edit existing listings.</p>
                     </div>
                   </div>
 
+                  {/* Sub-tabs */}
+                  <div className="flex gap-1 bg-surface-2 p-1 rounded-2xl border border-border overflow-x-auto">
+                    {([
+                      { id: "new", label: "New Product", icon: Plus },
+                      { id: "catalogues", label: "Catalogues", icon: BookOpen },
+                      { id: "edit", label: "Edit Products", icon: PenSquare },
+                    ] as const).map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setProductCreatorTab(t.id)}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                          productCreatorTab === t.id
+                            ? "bg-primary text-white shadow-md"
+                            : "text-text-secondary hover:text-text-primary"
+                        }`}
+                      >
+                        <t.icon className="w-3.5 h-3.5" />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ── New Product Sub-tab ── */}
+                  {productCreatorTab === "new" && (
+                    <div className="space-y-6 max-w-3xl">
                   <form onSubmit={handleAdminProductSubmit} className="space-y-6">
                     {/* Basic Info */}
                     <div className="glass-card rounded-2xl border border-border bg-surface p-6 space-y-5">
@@ -958,6 +1180,226 @@ export default function AdminDashboardPage() {
                       <p className="text-xs text-text-muted">Products published here are instantly live for customers.</p>
                     </div>
                   </form>
+                    </div>
+                  )}
+
+                  {/* ── Catalogues Sub-tab ── */}
+                  {productCreatorTab === "catalogues" && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Create Catalogue */}
+                        <div className="glass-card rounded-2xl border border-border bg-surface p-6 space-y-4 h-fit">
+                          <h3 className="font-semibold text-text-primary text-sm border-b border-border pb-3 flex items-center gap-2">
+                            <Plus className="w-4 h-4 text-primary" /> Create Catalogue
+                          </h3>
+                          <form onSubmit={handleCreateCatalogue} className="space-y-4">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-text-muted uppercase">Catalogue Name *</label>
+                              <input
+                                required type="text" placeholder="e.g. Summer Collection"
+                                value={catalogueForm.name}
+                                onChange={(e) => setCatalogueForm(f => ({ ...f, name: e.target.value }))}
+                                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-text-muted uppercase">Description</label>
+                              <textarea
+                                rows={2} placeholder="Brief description..."
+                                value={catalogueForm.description}
+                                onChange={(e) => setCatalogueForm(f => ({ ...f, description: e.target.value }))}
+                                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors resize-none"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-bold text-text-muted uppercase">Cover Image URL</label>
+                              <input
+                                type="url" placeholder="https://..."
+                                value={catalogueForm.image}
+                                onChange={(e) => setCatalogueForm(f => ({ ...f, image: e.target.value }))}
+                                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors"
+                              />
+                            </div>
+                            <button type="submit" className="btn btn-primary w-full py-3 text-sm font-bold flex items-center justify-center gap-2">
+                              <Plus className="w-4 h-4" /> Create Catalogue
+                            </button>
+                          </form>
+                        </div>
+
+                        {/* Catalogue List + Product Assignment */}
+                        <div className="lg:col-span-2 space-y-4">
+                          {localCatalogues.length === 0 ? (
+                            <div className="p-16 text-center border border-dashed border-border rounded-2xl">
+                              <p className="text-text-muted text-sm">No catalogues yet. Create one on the left.</p>
+                            </div>
+                          ) : (
+                            localCatalogues.map((cat) => (
+                              <div key={cat.id} className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                                <div className="p-4 border-b border-border flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {cat.image && <img src={cat.image} alt="" className="w-10 h-10 rounded-lg object-cover" />}
+                                    <div>
+                                      <p className="font-bold text-text-primary text-sm">{cat.name}</p>
+                                      <p className="text-text-muted text-[11px]">{(cat.productIds || []).length} products assigned</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setSelectedCatalogueId(selectedCatalogueId === cat.id ? null : cat.id)}
+                                      className="px-3 py-1.5 bg-primary/10 text-primary text-xs font-bold rounded-lg hover:bg-primary hover:text-white transition-all"
+                                    >
+                                      {selectedCatalogueId === cat.id ? "Hide Products" : "Assign Products"}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteCatalogue(cat.id)}
+                                      className="p-1.5 bg-danger/10 text-danger hover:bg-danger hover:text-white rounded-lg transition-all"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {selectedCatalogueId === cat.id && (
+                                  <div className="p-4 space-y-3">
+                                    <input
+                                      type="text"
+                                      placeholder="Search products to assign..."
+                                      value={catalogueProductSearch}
+                                      onChange={(e) => setCatalogueProductSearch(e.target.value)}
+                                      className="w-full bg-surface-2 border border-border rounded-xl px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-primary"
+                                    />
+                                    <div className="max-h-48 overflow-y-auto space-y-1.5">
+                                      {localProducts
+                                        .filter((p) => p.name?.toLowerCase().includes(catalogueProductSearch.toLowerCase()))
+                                        .map((p) => (
+                                          <label key={p.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-surface-2 cursor-pointer transition-colors">
+                                            <input
+                                              type="checkbox"
+                                              checked={(cat.productIds || []).includes(p.id)}
+                                              onChange={() => handleToggleProductInCatalogue(cat.id, p.id)}
+                                              className="w-4 h-4 accent-primary"
+                                            />
+                                            <img src={p.images?.[0]} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-semibold text-text-primary truncate">{p.name}</p>
+                                              <p className="text-[10px] text-text-muted">₹{p.price?.toLocaleString("en-IN")}</p>
+                                            </div>
+                                          </label>
+                                        ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Edit Products Sub-tab ── */}
+                  {productCreatorTab === "edit" && (
+                    <div className="space-y-4">
+                      {editingProduct ? (
+                        <div className="glass-card rounded-2xl border border-border bg-surface p-6 space-y-5 max-w-2xl">
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-text-primary">Editing: <span className="text-primary">{editingProduct.name}</span></h3>
+                            <button onClick={() => setEditingProduct(null)} className="text-text-muted hover:text-text-primary text-xs font-bold">← Back to list</button>
+                          </div>
+                          {[
+                            { label: "Product Name", field: "name", type: "text" },
+                            { label: "Brand", field: "brand", type: "text" },
+                            { label: "Sale Price (₹)", field: "price", type: "number" },
+                            { label: "Original Price (₹)", field: "originalPrice", type: "number" },
+                            { label: "Stock", field: "stock", type: "number" },
+                            { label: "Image URL", field: "image", type: "url" },
+                          ].map(({ label, field, type }) => (
+                            <div key={field} className="space-y-1.5">
+                              <label className="text-xs font-bold text-text-muted uppercase">{label}</label>
+                              <input
+                                type={type}
+                                value={editProductForm[field] ?? editingProduct[field] ?? ""}
+                                onChange={(e) => setEditProductForm((f: any) => ({ ...f, [field]: type === "number" ? parseFloat(e.target.value) || 0 : e.target.value }))}
+                                className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors"
+                              />
+                            </div>
+                          ))}
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-text-muted uppercase">Description</label>
+                            <textarea
+                              rows={3}
+                              value={editProductForm.description ?? editingProduct.description ?? ""}
+                              onChange={(e) => setEditProductForm((f: any) => ({ ...f, description: e.target.value }))}
+                              className="w-full bg-surface-2 border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-primary transition-colors resize-none"
+                            />
+                          </div>
+                          <div className="flex gap-3">
+                            <button onClick={handleSaveEditProduct} className="btn-primary px-6 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2">
+                              <Check className="w-4 h-4" /> Save Changes
+                            </button>
+                            <button onClick={() => setEditingProduct(null)} className="px-5 py-2.5 rounded-xl border border-border text-text-secondary text-sm hover:text-text-primary transition-all">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 bg-surface-2 rounded-xl border border-border px-3 py-2 text-xs max-w-sm">
+                            <Search className="w-4 h-4 text-text-muted" />
+                            <input
+                              type="text"
+                              placeholder="Search products to edit..."
+                              value={productSearch}
+                              onChange={(e) => setProductSearch(e.target.value)}
+                              className="bg-transparent outline-none text-text-primary flex-1"
+                            />
+                          </div>
+                          <div className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-surface-2 text-text-muted font-bold uppercase tracking-wider">
+                                  <th className="p-4">Product</th>
+                                  <th className="p-4">Price</th>
+                                  <th className="p-4">Stock</th>
+                                  <th className="p-4 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/60">
+                                {localProducts
+                                  .filter((p) => p.name?.toLowerCase().includes(productSearch.toLowerCase()))
+                                  .map((p) => (
+                                    <tr key={p.id} className="hover:bg-surface-2/40 transition-colors">
+                                      <td className="p-4">
+                                        <div className="flex items-center gap-3">
+                                          <img src={p.images?.[0]} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                                          <div>
+                                            <p className="font-semibold text-text-primary">{p.name}</p>
+                                            <p className="text-text-muted text-[10px]">{p.brand}</p>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="p-4 font-bold text-text-primary">₹{p.price?.toLocaleString("en-IN")}</td>
+                                      <td className="p-4">
+                                        <span className={`badge text-[10px] ${p.stock > 10 ? "badge-primary" : p.stock > 0 ? "badge-warning" : "badge-danger"}`}>
+                                          {p.stock} units
+                                        </span>
+                                      </td>
+                                      <td className="p-4 text-right">
+                                        <button
+                                          onClick={() => startEditProduct(p)}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-lg text-[10px] font-bold transition-all ml-auto"
+                                        >
+                                          <Edit className="w-3 h-3" /> Edit
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

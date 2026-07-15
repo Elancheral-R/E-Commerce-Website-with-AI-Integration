@@ -4,17 +4,19 @@ import { useState, use, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart, Heart, Star, Truck, Shield, RotateCcw, Check,
-  ChevronLeft, ChevronRight, Share2, Zap, Package, Award, Plus, Minus, MessageSquare, ShieldCheck, ArrowRight
+  ShoppingCart, Heart, Star, Truck, Shield, RotateCcw,
+  ChevronLeft, ChevronRight, Share2, Zap, Package, Award, Plus, Minus, MessageSquare, ShieldCheck, PenLine
 } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { ProductCard } from "@/components/products/product-card";
+import { ReviewModal } from "@/components/products/review-modal";
 import { mockProducts, mockReviews } from "@/lib/mock-data";
 import { useCartStore } from "@/lib/store/cart";
 import { useWishlistStore } from "@/lib/store/wishlist";
+import { useAuthStore } from "@/lib/store/auth";
 import { formatCurrency, getDiscountPercentage, cn } from "@/lib/utils";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -44,6 +46,10 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { slug } = use(params);
   const [mounted, setMounted] = useState(false);
   const [products, setProducts] = useState<any[]>(mockProducts);
+  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  const { user, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +64,19 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   }, []);
 
   const product = products.find((p) => p.slug === slug);
+
+  // Load user reviews for this product
+  const loadUserReviews = () => {
+    if (typeof window !== "undefined" && product) {
+      const all: any[] = JSON.parse(localStorage.getItem("nexmart-reviews") || "[]");
+      setUserReviews(all.filter((r) => r.productId === product.id));
+    }
+  };
+
+  useEffect(() => {
+    if (product) loadUserReviews();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -104,7 +123,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
     <>
       <Header />
       <CartDrawer />
-      <main className="min-h-screen bg-[#06060a] pt-32 pb-24 relative overflow-hidden">
+      <main className="min-h-screen bg-background pt-32 pb-24 relative overflow-hidden">
         {/* Decorative Background Elements */}
         <div className="absolute top-20 left-10 w-[600px] h-[600px] rounded-full blur-3xl opacity-[0.06] pointer-events-none bg-gradient-to-br from-primary to-secondary" />
         <div className="absolute bottom-20 right-10 w-[500px] h-[500px] rounded-full blur-3xl opacity-[0.04] pointer-events-none bg-gradient-to-br from-electric to-cyan-400" />
@@ -146,7 +165,7 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 </AnimatePresence>
 
                 {/* Subtle Image Vignette */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-surface-3" />
 
                 {/* Image Navigation Arrows */}
                 {product.images.length > 1 && (
@@ -493,68 +512,133 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
                 {/* Reviews Tab */}
                 {activeTab === "reviews" && (
                   <div className="space-y-10">
-                    {/* Rating statistics */}
-                    <div className="flex flex-col sm:flex-row gap-10 p-6 rounded-3xl bg-surface-2 border border-white/5 items-center">
+                    {/* Rating statistics + Write Review CTA */}
+                    <div className="flex flex-col sm:flex-row gap-10 p-6 rounded-3xl bg-surface-2 border border-border items-center">
                       <div className="text-center px-4">
                         <p className="font-display font-black text-6xl gradient-text">{product.rating}</p>
                         <div className="flex justify-center gap-0.5 mt-3">
                           {[1, 2, 3, 4, 5].map((s) => (
-                            <Star key={s} className={cn("w-4.5 h-4.5", s <= Math.floor(product.rating) ? "fill-accent text-accent" : "fill-white/10 text-white/10")} />
+                            <Star key={s} className={cn("w-4.5 h-4.5", s <= Math.floor(product.rating) ? "fill-accent text-accent" : "fill-surface-3 text-surface-3")} />
                           ))}
                         </div>
-                        <p className="text-white/40 text-xs font-semibold mt-2">{product.reviewCount.toLocaleString()} aggregate ratings</p>
+                        <p className="text-text-muted text-xs font-semibold mt-2">{product.reviewCount.toLocaleString()} aggregate ratings</p>
                       </div>
                       <div className="flex-1 w-full space-y-2.5">
                         {ratingBreakdown.map(({ stars, count, pct }) => (
                           <div key={stars} className="flex items-center gap-3 text-xs">
-                            <span className="text-white/40 font-bold w-6">{stars}★</span>
-                            <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                            <span className="text-text-muted font-bold w-6">{stars}★</span>
+                            <div className="flex-1 h-2 bg-surface-3 rounded-full overflow-hidden">
                               <div className="h-full bg-gradient-to-r from-accent to-amber-500 rounded-full" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="text-white/40 font-bold w-8 text-right">{pct}%</span>
+                            <span className="text-text-muted font-bold w-8 text-right">{pct}%</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* Review List cards */}
-                    <div className="grid md:grid-cols-2 gap-5">
-                      {mockReviews.map((review) => (
-                        <div key={review.id} className="p-6 rounded-3xl bg-surface border border-white/5 shadow-md flex flex-col justify-between">
-                          <div>
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-2 ring-1 ring-white/10">
-                                  <img src={review.user.avatar} alt={review.user.name} className="w-full h-full" />
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-white text-xs">{review.user.name}</span>
-                                    {review.isVerifiedPurchase && (
-                                      <span className="badge badge-success text-[7px] py-0.5 px-1.5">✓ VERIFIED</span>
-                                    )}
-                                  </div>
-                                  <span className="text-[10px] text-white/30" suppressHydrationWarning>{new Date(review.createdAt).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                              <div className="flex gap-0.5">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "fill-accent text-accent" : "fill-white/15 text-white/15")} />
-                                ))}
-                              </div>
-                            </div>
-                            <h4 className="font-bold text-white text-sm mb-2">{review.title}</h4>
-                            <p className="text-white/50 text-xs leading-relaxed">{review.body}</p>
-                          </div>
+                    {/* Write Review CTA */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-display font-bold text-lg text-text-primary">
+                        {userReviews.length > 0 ? `${userReviews.length} Verified Review${userReviews.length > 1 ? "s" : ""}` : "Customer Reviews"}
+                      </h3>
+                      {isAuthenticated ? (
+                        <button
+                          onClick={() => setShowReviewModal(true)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-bold hover:bg-primary hover:text-white transition-all"
+                        >
+                          <PenLine className="w-3.5 h-3.5" />
+                          Write a Review
+                        </button>
+                      ) : (
+                        <Link
+                          href="/auth/login"
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 border border-border text-text-secondary text-xs font-bold hover:border-primary/40 hover:text-primary transition-all"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Login to Review
+                        </Link>
+                      )}
+                    </div>
 
-                          <div className="flex items-center justify-between mt-5 pt-4 border-t border-white/5 text-[10px] text-white/30">
-                            <button className="hover:text-primary transition-colors font-bold uppercase">
-                              👍 Helpful ({review.helpfulCount})
-                            </button>
-                            <button className="hover:text-primary transition-colors font-bold uppercase">Report Abuse</button>
+                    {/* User-submitted reviews */}
+                    {userReviews.length > 0 && (
+                      <div className="grid md:grid-cols-2 gap-5">
+                        {userReviews.map((review) => (
+                          <div key={review.id} className="p-6 rounded-3xl bg-surface border border-border shadow-card flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-2 ring-1 ring-border">
+                                    <img src={review.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${review.userName}`} alt={review.userName} className="w-full h-full" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-text-primary text-xs">{review.userName}</span>
+                                      {review.isVerifiedPurchase && (
+                                        <span className="badge badge-success text-[7px] py-0.5 px-1.5">✓ VERIFIED</span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] text-text-muted" suppressHydrationWarning>{new Date(review.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "fill-accent text-accent" : "fill-surface-3 text-surface-3")} />
+                                  ))}
+                                </div>
+                              </div>
+                              <h4 className="font-bold text-text-primary text-sm mb-2">{review.title}</h4>
+                              <p className="text-text-secondary text-xs leading-relaxed">{review.body}</p>
+                            </div>
+                            <div className="flex items-center justify-between mt-5 pt-4 border-t border-border text-[10px] text-text-muted">
+                              <button className="hover:text-primary transition-colors font-bold uppercase">👍 Helpful ({review.helpfulCount || 0})</button>
+                              <button className="hover:text-danger transition-colors font-bold uppercase">Report</button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Mock reviews (from data) */}
+                    <div>
+                      {userReviews.length === 0 && (
+                        <p className="text-text-muted text-xs mb-6 font-medium">Sample reviews from our database:</p>
+                      )}
+                      <div className="grid md:grid-cols-2 gap-5">
+                        {mockReviews.map((review) => (
+                          <div key={review.id} className="p-6 rounded-3xl bg-surface border border-border shadow-card flex flex-col justify-between opacity-70">
+                            <div>
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-2 ring-1 ring-border">
+                                    <img src={review.user.avatar} alt={review.user.name} className="w-full h-full" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-bold text-text-primary text-xs">{review.user.name}</span>
+                                      {review.isVerifiedPurchase && (
+                                        <span className="badge badge-success text-[7px] py-0.5 px-1.5">✓ VERIFIED</span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] text-text-muted" suppressHydrationWarning>{new Date(review.createdAt).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                <div className="flex gap-0.5">
+                                  {[1, 2, 3, 4, 5].map((s) => (
+                                    <Star key={s} className={cn("w-3 h-3", s <= review.rating ? "fill-accent text-accent" : "fill-surface-3 text-surface-3")} />
+                                  ))}
+                                </div>
+                              </div>
+                              <h4 className="font-bold text-text-primary text-sm mb-2">{review.title}</h4>
+                              <p className="text-text-secondary text-xs leading-relaxed">{review.body}</p>
+                            </div>
+                            <div className="flex items-center justify-between mt-5 pt-4 border-t border-border text-[10px] text-text-muted">
+                              <button className="hover:text-primary transition-colors font-bold uppercase">👍 Helpful ({review.helpfulCount})</button>
+                              <button className="hover:text-danger transition-colors font-bold uppercase">Report Abuse</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -655,6 +739,17 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
         </div>
       </main>
       <Footer />
+
+      {/* Verified Purchase Review Modal */}
+      {product && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          productId={product.id}
+          productName={product.name}
+          onReviewSubmitted={loadUserReviews}
+        />
+      )}
     </>
   );
 }

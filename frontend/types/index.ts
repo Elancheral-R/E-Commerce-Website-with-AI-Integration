@@ -103,7 +103,7 @@ export interface User {
   name: string;
   avatar?: string;
   phone?: string;
-  role: "customer" | "seller" | "admin" | "support";
+  role: "customer" | "seller" | "admin" | "support" | "seller-pending";
   isEmailVerified: boolean;
   isTwoFactorEnabled: boolean;
   loyaltyPoints: number;

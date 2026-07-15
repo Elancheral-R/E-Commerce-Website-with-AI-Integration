@@ -25,12 +25,14 @@ import {
   TrendingUp,
   Command,
   ArrowRight,
+  Building2,
 } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart";
 import { useWishlistStore } from "@/lib/store/wishlist";
 import { useAuthStore } from "@/lib/store/auth";
 import { cn, debounce } from "@/lib/utils";
 import { popularSearches, mockProducts } from "@/lib/mock-data";
+import { BecomeSellerModal } from "@/components/seller/become-seller-modal";
 import type { Product } from "@/types";
 
 const navLinks = [
@@ -50,6 +52,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [becomeSellerOpen, setBecomeSellerOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,61 +107,53 @@ export function Header() {
   return (
     <>
       <header className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        scrolled
+          ? "bg-surface/95 backdrop-blur-md border-b border-border shadow-sm"
+          : "bg-transparent"
       )}>
         {/* Announcement Bar */}
-        <div className="bg-gradient-to-r from-primary via-secondary to-electric text-white text-center py-2 text-xs font-semibold tracking-wide animate-gradient">
+        <div className="bg-slate-900 text-white text-center py-2 text-xs font-medium tracking-wide">
           ✨ Free shipping on orders above ₹999 &nbsp;·&nbsp; Use{" "}
-          <span className="font-black bg-white/15 px-2 py-0.5 rounded-md">NEXMART50</span>
+          <span className="font-bold bg-white/10 px-2 py-0.5 rounded">NEXMART50</span>
           {" "}for 50% off &nbsp;·&nbsp; AI-powered recommendations now live
         </div>
 
         {/* Nav wrapper */}
-        <div className={cn(
-          "transition-all duration-500",
-          scrolled
-            ? "py-2 px-4 md:px-8"
-            : "py-3 px-0"
-        )}>
-          <nav className={cn(
-            "mx-auto transition-all duration-500",
-            scrolled
-              ? "max-w-6xl glass-dark border border-white/8 rounded-2xl shadow-2xl px-6"
-              : "max-w-[1400px] px-4 md:px-8 bg-transparent"
-          )}>
+        <div className="py-3 px-4 md:px-8">
+          <nav className="mx-auto max-w-[1400px]">
             <div className="flex items-center gap-3 h-14">
 
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2.5 flex-shrink-0 group">
-                <div className="relative w-9 h-9">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg group-hover:shadow-[0_0_20px_rgb(99_102_241/0.5)] transition-all duration-300">
-                    <Zap className="w-5 h-5 text-white fill-white" />
+              <Link href="/" className="flex items-center gap-2 flex-shrink-0 group">
+                <div className="relative w-8.5 h-8.5">
+                  <div className="w-8.5 h-8.5 rounded-lg bg-primary flex items-center justify-center transition-all duration-200">
+                    <Zap className="w-4.5 h-4.5 text-white fill-white" />
                   </div>
-                  <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-br from-primary to-secondary opacity-0 group-hover:opacity-30 blur-sm transition-all duration-300 -z-10" />
                 </div>
-                <span className="font-display font-bold text-xl gradient-text hidden sm:block">
+                <span className="font-display font-bold text-lg text-text-primary hidden sm:block">
                   NexMart
                 </span>
               </Link>
 
               {/* Desktop Nav */}
-              <nav className="hidden lg:flex items-center gap-0.5 ml-3">
+              <nav className="hidden lg:flex items-center gap-1 ml-4">
                 {visibleNavLinks.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium text-text-secondary hover:text-text-primary transition-all duration-150 group"
+                    className="relative flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary transition-all duration-150 group"
                   >
                     <span className="relative">
                       {link.label}
-                      <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-gradient-to-r from-primary to-secondary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left rounded-full" />
+                      <span className="absolute -bottom-0.5 left-0 right-0 h-[2px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left rounded-full" />
                     </span>
                     {link.badge && (
                       <span className={cn(
-                        "text-[9px] px-1.5 py-0.5 rounded-full font-black tracking-wide",
+                        "text-[9px] px-1.5 py-0.5 rounded-full font-bold tracking-wide",
                         link.badge === "AI"
-                          ? "bg-gradient-to-r from-primary to-secondary text-white"
-                          : "bg-danger/15 text-danger border border-danger/20"
+                          ? "bg-primary text-white"
+                          : "bg-danger/10 text-danger border border-danger/15"
                       )}>
                         {link.badge}
                       </span>
@@ -168,19 +163,19 @@ export function Header() {
               </nav>
 
               {/* Search Trigger */}
-              <div ref={searchRef} className="flex-1 max-w-md mx-3 hidden md:block">
+              <div ref={searchRef} className="flex-1 max-w-md mx-4 hidden md:block">
                 <button
                   onClick={() => { setSearchOpen(true); setTimeout(() => searchInputRef.current?.focus(), 100); }}
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-4 py-2.5 rounded-xl border text-sm text-text-muted transition-all duration-200",
+                    "w-full flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm text-text-muted transition-all duration-200",
                     searchOpen
                       ? "hidden"
-                      : "bg-surface-2/60 border-border hover:border-primary/30 hover:bg-surface-2"
+                      : "bg-surface-2 border-border hover:border-primary/45 hover:bg-surface"
                   )}
                 >
                   <Search className="w-4 h-4 flex-shrink-0" />
-                  <span className="flex-1 text-left">Search products...</span>
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-surface-3 border border-border">
+                  <span className="flex-1 text-left text-xs">Search products...</span>
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-3 border border-border">
                     <Command className="w-2.5 h-2.5" />
                     <span className="text-[10px] font-bold">K</span>
                   </div>
@@ -194,7 +189,7 @@ export function Header() {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute left-4 right-4 top-full mt-2 glass-card rounded-2xl border border-border shadow-2xl overflow-hidden z-50 md:relative md:top-auto md:left-auto md:right-auto md:mt-0 md:shadow-none"
+                      className="absolute left-4 right-4 top-full mt-2 bg-surface rounded-xl border border-border shadow-xl overflow-hidden z-50 md:relative md:top-auto md:left-auto md:right-auto md:mt-0 md:shadow-none"
                     >
                       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border">
                         <Search className="w-4 h-4 text-primary flex-shrink-0" />
@@ -271,6 +266,17 @@ export function Header() {
                   <span className="hidden lg:block">AI Search</span>
                 </button>
 
+                {/* Become a Seller */}
+                {(!isAuthenticated || user?.role === "customer") && (
+                  <button
+                    onClick={() => setBecomeSellerOpen(true)}
+                    className="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 border border-border hover:border-primary/30 transition-all cursor-pointer"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Become a Seller</span>
+                  </button>
+                )}
+
                 {/* Theme Toggle */}
                 {mounted && (
                   <button
@@ -331,7 +337,7 @@ export function Header() {
                         animate={{ scale: 1 }}
                         exit={{ scale: 0 }}
                         transition={{ type: "spring", stiffness: 600, damping: 18 }}
-                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-gradient-to-r from-primary to-secondary text-white text-[9px] font-black rounded-full flex items-center justify-center"
+                        className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center"
                       >
                         {count > 99 ? "99+" : count}
                       </motion.span>
@@ -345,7 +351,7 @@ export function Header() {
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center gap-2 p-1 pl-1.5 rounded-xl hover:bg-surface-2 transition-all ml-1"
                   >
-                    <div className="w-7.5 h-7.5 w-[30px] h-[30px] rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex items-center justify-center ring-2 ring-primary/20">
+                    <div className="w-7.5 h-7.5 w-[30px] h-[30px] rounded-full overflow-hidden bg-primary flex items-center justify-center ring-2 ring-primary/20">
                       {user?.avatar ? (
                         <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                       ) : (
@@ -362,13 +368,13 @@ export function Header() {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 6, scale: 0.96 }}
                         transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-                        className="absolute right-0 top-full mt-2 w-60 glass-card rounded-2xl border border-border shadow-2xl overflow-hidden z-50"
+                        className="absolute right-0 top-full mt-2 w-60 bg-surface rounded-xl border border-border shadow-lg overflow-hidden z-50"
                       >
                         {isAuthenticated && user ? (
                           <>
                             <div className="p-4 border-b border-border">
                               <div className="flex items-center gap-3 mb-2">
-                                <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary to-secondary flex-shrink-0 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-full overflow-hidden bg-primary flex-shrink-0 flex items-center justify-center">
                                   {user?.avatar ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-white" />}
                                 </div>
                                 <div>
@@ -390,17 +396,35 @@ export function Header() {
                                 { href: "/profile/settings", icon: Settings, label: "Settings" },
                                 ...(user.role === "seller" ? [{ href: "/seller/dashboard", icon: LayoutDashboard, label: "Seller Dashboard" }] : []),
                                 ...(user.role === "admin" ? [{ href: "/admin/dashboard", icon: LayoutDashboard, label: "Admin Panel" }] : []),
-                              ].map((item) => (
-                                <Link
-                                  key={item.href}
-                                  href={item.href}
-                                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm text-text-secondary hover:text-text-primary transition-all group"
-                                  onClick={() => setUserMenuOpen(false)}
-                                >
-                                  <item.icon className="w-4 h-4 group-hover:text-primary transition-colors" />
-                                  {item.label}
-                                </Link>
-                              ))}
+                                ...(user.role === "customer" ? [{ action: "become-seller", icon: Building2, label: "Become a Seller" }] : []),
+                              ].map((item) => {
+                                if ("action" in item) {
+                                  return (
+                                    <button
+                                      key={item.label}
+                                      onClick={() => {
+                                        if (item.action === "become-seller") setBecomeSellerOpen(true);
+                                        setUserMenuOpen(false);
+                                      }}
+                                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm text-text-secondary hover:text-text-primary transition-all group text-left cursor-pointer"
+                                    >
+                                      <item.icon className="w-4 h-4 group-hover:text-primary transition-colors" />
+                                      {item.label}
+                                    </button>
+                                  );
+                                }
+                                return (
+                                  <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm text-text-secondary hover:text-text-primary transition-all group"
+                                    onClick={() => setUserMenuOpen(false)}
+                                  >
+                                    <item.icon className="w-4 h-4 group-hover:text-primary transition-colors" />
+                                    {item.label}
+                                  </Link>
+                                );
+                              })}
                               <button
                                 onClick={() => { logout(); setUserMenuOpen(false); }}
                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-danger/8 text-sm text-danger transition-all mt-1 border-t border-border/50 pt-3"
@@ -472,11 +496,11 @@ export function Header() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 350 }}
-              className="fixed bottom-0 left-0 right-0 z-50 lg:hidden glass-dark border-t border-white/8 rounded-t-3xl shadow-2xl"
+              className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-surface border-t border-border rounded-t-3xl shadow-xl"
             >
               {/* Handle */}
               <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
+                <div className="w-10 h-1 rounded-full bg-border" />
               </div>
 
               {/* Mobile Search */}
@@ -509,10 +533,10 @@ export function Header() {
                       <div className="flex items-center gap-2">
                         {link.badge && (
                           <span className={cn(
-                            "text-[9px] px-1.5 py-0.5 rounded-full font-black",
+                            "text-[9px] px-1.5 py-0.5 rounded-full font-bold",
                             link.badge === "AI"
-                              ? "bg-gradient-to-r from-primary to-secondary text-white"
-                              : "bg-danger/12 text-danger border border-danger/20"
+                              ? "bg-primary text-white"
+                              : "bg-danger/10 text-danger border border-danger/15"
                           )}>
                             {link.badge}
                           </span>
@@ -522,6 +546,24 @@ export function Header() {
                     </Link>
                   </motion.div>
                 ))}
+                {(!isAuthenticated || user?.role === "customer") && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: visibleNavLinks.length * 0.04 }}
+                  >
+                    <button
+                      onClick={() => { setBecomeSellerOpen(true); setMobileOpen(false); }}
+                      className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl hover:bg-surface-2 text-text-secondary hover:text-text-primary transition-all text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-text-muted" />
+                        <span className="font-semibold">Become a Seller</span>
+                      </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-text-muted" />
+                    </button>
+                  </motion.div>
+                )}
               </nav>
 
               <div className="px-4 pb-3 pt-2 border-t border-border grid grid-cols-3 gap-2">
@@ -548,6 +590,8 @@ export function Header() {
           </>
         )}
       </AnimatePresence>
+
+      <BecomeSellerModal isOpen={becomeSellerOpen} onClose={() => setBecomeSellerOpen(false)} />
     </>
   );
 }
