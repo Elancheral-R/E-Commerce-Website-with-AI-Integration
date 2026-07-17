@@ -4,6 +4,7 @@ com\nexmart\auth\repository\RefreshTokenRepository.class
 com\nexmart\auth\repository\UserRepository.class
 com\nexmart\auth\service\AuthService.class
 com\nexmart\auth\dto\RegisterRequest$RegisterRequestBuilder.class
+com\nexmart\auth\config\AdminSeeder.class
 com\nexmart\auth\dto\RegisterRequest.class
 com\nexmart\auth\entity\RefreshToken$RefreshTokenBuilder.class
 com\nexmart\auth\entity\Role.class

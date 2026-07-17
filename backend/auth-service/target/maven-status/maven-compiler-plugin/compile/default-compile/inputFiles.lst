@@ -1,4 +1,5 @@
 D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\AuthServiceApplication.java
+D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\config\AdminSeeder.java
 D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\config\SecurityConfig.java
 D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\controller\AuthController.java
 D:\E-Commerce-Website-with-AI-Integration\backend\auth-service\src\main\java\com\nexmart\auth\dto\RegisterRequest.java
