@@ -27,9 +27,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       // Expose token fields to the client-side session object
       if (session.user) {
-        session.user.id = token.sub ?? "";
-        (session.user as { role?: string }).role = (token.role as string) ?? "customer";
-        (session.user as { avatarUrl?: string }).avatarUrl = token.avatarUrl as string;
+        if (session.user) {
+  (session.user as any).id = token.sub ?? "";
+  (session.user as any).role = token.role ?? "customer";
+  (session.user as any).avatarUrl = token.avatarUrl;
+}
       }
       return session;
     },
