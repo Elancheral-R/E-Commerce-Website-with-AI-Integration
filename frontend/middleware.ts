@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Routes that require authentication
+// Routes that require authentication (customers + admin, NOT sellers)
 const PROTECTED_ROUTES = [
   "/checkout",
   "/orders",
@@ -19,6 +19,14 @@ const SELLER_ROUTES = [
   "/seller",
 ];
 
+// Routes BLOCKED for sellers (they have a dedicated portal)
+const SELLER_BLOCKED_ROUTES = [
+  "/checkout",
+  "/orders",
+  "/wishlist",
+  "/cart",
+];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -28,6 +36,14 @@ export function middleware(request: NextRequest) {
 
   const isAuthenticated = authCookie?.value === "true";
   const userRole = roleCookie?.value || "customer";
+
+  // Block sellers from customer-only routes → redirect to seller dashboard
+  if (
+    userRole === "seller" &&
+    SELLER_BLOCKED_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))
+  ) {
+    return NextResponse.redirect(new URL("/seller/dashboard", request.url));
+  }
 
   // Check admin-only routes
   if (ADMIN_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
@@ -74,5 +90,6 @@ export const config = {
     "/wishlist/:path*",
     "/admin/:path*",
     "/seller/:path*",
+    "/cart/:path*",
   ],
 };

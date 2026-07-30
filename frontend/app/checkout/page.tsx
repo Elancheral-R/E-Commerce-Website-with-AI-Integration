@@ -52,12 +52,72 @@ export default function CheckoutPage() {
 
   const [giftWrapping, setGiftWrapping] = useState(false);
 
+  const { user } = useAuthStore();
+
   const handleNext = () => {
     if (activeStep < STEPS.length - 1) {
       setActiveStep(activeStep + 1);
     } else {
+      // Create and save dynamic order
+      if (typeof window !== "undefined" && user) {
+        const orderId = "o-" + Date.now();
+        const orderNumber = "NEX-" + Math.floor(100000 + Math.random() * 900000);
+        const formattedAddress = `${address.addressLine1 || "123 Main St"}, ${address.city || "Bangalore"}, ${address.state || "Karnataka"} - ${address.pincode || "560001"}`;
+        
+        const newOrder = {
+          id: orderId,
+          orderNumber,
+          userId: user.id,
+          userName: user.name,
+          userEmail: user.email,
+          createdAt: new Date().toISOString(),
+          total: totalAmount,
+          status: "pending",
+          address: formattedAddress,
+          trackingNumber: "DEL-" + Math.floor(10000000 + Math.random() * 90000000),
+          items: items.map((it) => ({
+            name: it.product.name,
+            qty: it.quantity,
+            price: it.product.price,
+            img: it.product.images?.[0] || "",
+            sellerId: it.product.seller?.id || "s1",
+            timeline: [
+              { status: "pending", desc: "Order placed by customer", timestamp: new Date().toISOString(), active: true },
+              { status: "confirmed", desc: "Payment verified, order confirmed", timestamp: "", active: false },
+              { status: "processing", desc: "Picked & packed at warehouse", timestamp: "", active: false },
+              { status: "shipped", desc: "In transit to delivery hub", timestamp: "", active: false },
+              { status: "out_for_delivery", desc: "Out for delivery", timestamp: "", active: false },
+              { status: "delivered", desc: "Delivered to customer", timestamp: "", active: false },
+            ]
+          })),
+        };
+
+        // Save order to nexmart-orders
+        const existingOrders = JSON.parse(localStorage.getItem("nexmart-orders") || "[]");
+        existingOrders.push(newOrder);
+        localStorage.setItem("nexmart-orders", JSON.stringify(existingOrders));
+
+        // Notify each respective seller
+        items.forEach((it) => {
+          const sellerId = it.product.seller?.id || "s1";
+          const notifKey = `nexmart-seller-notifications-${sellerId}`;
+          const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || "[]");
+          existingNotifs.unshift({
+            id: "notif-" + Date.now() + "-" + Math.random(),
+            orderId,
+            orderNumber,
+            productName: it.product.name,
+            qty: it.quantity,
+            message: `New order ${orderNumber} for "${it.product.name}" (Qty: ${it.quantity})`,
+            createdAt: new Date().toISOString(),
+            read: false,
+          });
+          localStorage.setItem(notifKey, JSON.stringify(existingNotifs));
+        });
+      }
+
       clearCart();
-      router.push("/orders/confirmation");
+      router.push("/orders");
     }
   };
 
@@ -87,13 +147,13 @@ export default function CheckoutPage() {
 
               {/* ─── Auth Gate ─────────────────────────────────────────── */}
               {!isAuthenticated ? (
-                <div className="glass-card rounded-3xl border border-white/10 p-8 bg-surface shadow-2xl text-center flex flex-col items-center justify-center py-16 space-y-6">
+                <div className="glass-card rounded-3xl border border-border p-8 bg-surface shadow-2xl text-center flex flex-col items-center justify-center py-16 space-y-6">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
                     <Lock className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h2 className="font-display font-black text-2xl text-white mb-2">Sign In Required</h2>
-                    <p className="text-white/60 text-sm max-w-sm mx-auto">
+                    <h2 className="font-display font-black text-2xl text-text-primary mb-2">Sign In Required</h2>
+                    <p className="text-text-secondary text-sm max-w-sm mx-auto">
                       You must be signed in to check out and place your order. Sign in now to retrieve your saved addresses and secure your checkout.
                     </p>
                   </div>
@@ -105,7 +165,7 @@ export default function CheckoutPage() {
                     Sign In to Place Order
                     <ArrowRight className="w-4 h-4" />
                   </Link>
-                  <p className="text-white/30 text-xs">
+                  <p className="text-text-muted text-xs">
                     New here?{" "}
                     <Link href="/auth/register" className="text-primary hover:underline">
                       Create an account
@@ -115,7 +175,7 @@ export default function CheckoutPage() {
               ) : (
                 <>
                   {/* Stepper progress indicator */}
-                  <div className="glass-card rounded-3xl border border-white/5 p-6 bg-surface-2 flex items-center justify-between shadow-xl">
+                  <div className="glass-card rounded-3xl border border-border p-6 bg-surface-2 flex items-center justify-between shadow-xl">
                     {STEPS.map((step, index) => {
                       const Icon = step.icon;
                       return (
@@ -124,19 +184,19 @@ export default function CheckoutPage() {
                             className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black transition-all duration-300 shadow-md ${
                               index <= activeStep
                                 ? "bg-gradient-to-r from-primary to-secondary text-white glow-primary"
-                                : "bg-surface-3 text-white/30 border border-white/5"
+                                : "bg-surface-3 text-text-muted border border-border"
                             }`}
                           >
                             {index < activeStep ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
                           </div>
                           <div className="hidden md:block text-left">
-                            <p className="text-[10px] text-white/35 font-bold uppercase tracking-wider">Step {index + 1}</p>
-                            <p className={`text-xs font-black tracking-wide ${index === activeStep ? "text-white" : "text-white/45"}`}>
+                            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider">Step {index + 1}</p>
+                            <p className={`text-xs font-black tracking-wide ${index === activeStep ? "text-text-primary" : "text-text-muted"}`}>
                               {step.label}
                             </p>
                           </div>
                           {index < STEPS.length - 1 && (
-                            <ChevronRight className="w-4 h-4 text-white/20 ml-4 hidden md:block" />
+                            <ChevronRight className="w-4 h-4 text-text-muted/40 ml-4 hidden md:block" />
                           )}
                         </div>
                       );
@@ -144,64 +204,64 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Step Forms Container */}
-                  <div className="glass-card rounded-3xl border border-white/8 p-8 bg-surface space-y-6 shadow-2xl">
+                  <div className="glass-card rounded-3xl border border-border p-8 bg-surface space-y-6 shadow-2xl">
 
                     {/* Step 1: Address */}
                     {activeStep === 0 && (
                       <div className="space-y-6">
                         <div>
                           <span className="section-label mb-3 inline-flex">Delivery</span>
-                          <h2 className="font-display font-black text-2xl text-white flex items-center gap-2">
+                          <h2 className="font-display font-black text-2xl text-text-primary flex items-center gap-2">
                             Shipping Address
                           </h2>
                         </div>
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Full Name *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Full Name *</label>
                             <input type="text" required placeholder="John Doe" value={address.fullName}
                               onChange={(e) => setAddress({ ...address, fullName: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="fullName" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="fullName" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Phone Number *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Phone Number *</label>
                             <input type="tel" required placeholder="9876543210" value={address.phone}
                               onChange={(e) => setAddress({ ...address, phone: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="phone" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="phone" />
                           </div>
                           <div className="sm:col-span-2 space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Address Line 1 *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Address Line 1 *</label>
                             <input type="text" required placeholder="Flat, House no., Building, Company, Apartment"
                               value={address.addressLine1} onChange={(e) => setAddress({ ...address, addressLine1: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="addressLine1" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="addressLine1" />
                           </div>
                           <div className="sm:col-span-2 space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Address Line 2 (Optional)</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Address Line 2 (Optional)</label>
                             <input type="text" placeholder="Area, Street, Sector, Village" value={address.addressLine2}
                               onChange={(e) => setAddress({ ...address, addressLine2: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="addressLine2" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="addressLine2" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">City *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">City *</label>
                             <input type="text" required placeholder="Bengaluru" value={address.city}
                               onChange={(e) => setAddress({ ...address, city: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="city" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="city" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">State *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">State *</label>
                             <input type="text" required placeholder="Karnataka" value={address.state}
                               onChange={(e) => setAddress({ ...address, state: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="state" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="state" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Pincode *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Pincode *</label>
                             <input type="text" required placeholder="560001" value={address.pincode}
                               onChange={(e) => setAddress({ ...address, pincode: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="pincode" />
+                              className="input border-border rounded-xl text-xs text-text-primary" id="pincode" />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Country *</label>
+                            <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Country *</label>
                             <select value={address.country} onChange={(e) => setAddress({ ...address, country: e.target.value })}
-                              className="input border-white/8 rounded-xl text-xs" id="country-select">
+                              className="input border-border rounded-xl text-xs text-text-primary" id="country-select">
                               <option value="India">India</option>
                               <option value="United States">United States</option>
                               <option value="United Kingdom">United Kingdom</option>
@@ -216,7 +276,7 @@ export default function CheckoutPage() {
                       <div className="space-y-6">
                         <div>
                           <span className="section-label mb-3 inline-flex">Logistics</span>
-                          <h2 className="font-display font-black text-2xl text-white">Shipping Speed</h2>
+                          <h2 className="font-display font-black text-2xl text-text-primary">Shipping Speed</h2>
                         </div>
                         <div className="grid gap-4">
                           {[
@@ -228,13 +288,13 @@ export default function CheckoutPage() {
                               className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 flex items-center justify-between ${
                                 shippingMethod === method.id
                                   ? "border-primary bg-primary/5 shadow-md"
-                                  : "border-white/5 hover:border-primary/20 bg-surface-2/20"
+                                  : "border-border hover:border-primary/20 bg-surface-2"
                               }`}>
                               <div>
-                                <p className="font-bold text-white text-base">{method.label}</p>
-                                <p className="text-white/40 text-xs mt-1">{method.desc}</p>
+                                <p className="font-bold text-text-primary text-base">{method.label}</p>
+                                <p className="text-text-muted text-xs mt-1">{method.desc}</p>
                               </div>
-                              <span className={`font-black text-sm ${method.price === 0 ? "text-success" : "text-white"}`}>
+                              <span className={`font-black text-sm ${method.price === 0 ? "text-success" : "text-text-primary"}`}>
                                 {method.price === 0 ? "FREE" : `₹${method.price}`}
                               </span>
                             </button>
@@ -242,21 +302,21 @@ export default function CheckoutPage() {
                         </div>
 
                         {/* Gift wrapping widget */}
-                        <div className="p-5 rounded-3xl bg-surface-2 border border-white/5 flex items-center justify-between gap-4 shadow-sm">
+                        <div className="p-5 rounded-3xl bg-surface-2 border border-border flex items-center justify-between gap-4 shadow-sm">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                               <Gift className="w-5 h-5 text-primary" />
                             </div>
                             <div>
-                              <p className="font-bold text-white text-xs">Add Luxury Gift Wrapping</p>
-                              <p className="text-white/40 text-[10px]">Textured gift wrap &amp; custom cards (+₹49)</p>
+                              <p className="font-bold text-text-primary text-xs">Add Luxury Gift Wrapping</p>
+                              <p className="text-text-muted text-[10px]">Textured gift wrap &amp; custom cards (+₹49)</p>
                             </div>
                           </div>
                           <button onClick={() => setGiftWrapping(!giftWrapping)}
                             className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                               giftWrapping
                                 ? "bg-primary text-white"
-                                : "bg-surface-3 text-white/50 hover:bg-primary/20 hover:text-primary"
+                                : "bg-surface-3 text-text-muted hover:bg-primary/20 hover:text-primary"
                             }`}>
                             {giftWrapping ? "Added" : "Add wrapping"}
                           </button>
@@ -269,7 +329,7 @@ export default function CheckoutPage() {
                       <div className="space-y-6">
                         <div>
                           <span className="section-label mb-3 inline-flex">Billing</span>
-                          <h2 className="font-display font-black text-2xl text-white">Select Payment Method</h2>
+                          <h2 className="font-display font-black text-2xl text-text-primary">Select Payment Method</h2>
                         </div>
 
                         <div className="grid sm:grid-cols-2 gap-4">
@@ -283,10 +343,10 @@ export default function CheckoutPage() {
                               className={`w-full text-left p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between ${
                                 paymentMethod === pay.id
                                   ? "border-primary bg-primary/5 shadow-md"
-                                  : "border-white/5 hover:border-primary/20 bg-surface-2/20"
+                                  : "border-border hover:border-primary/20 bg-surface-2"
                               }`}>
-                              <p className="font-bold text-white text-xs">{pay.label}</p>
-                              <p className="text-white/40 text-[10px] mt-2.5 leading-relaxed">{pay.desc}</p>
+                              <p className="font-bold text-text-primary text-xs">{pay.label}</p>
+                              <p className="text-text-muted text-[10px] mt-2.5 leading-relaxed">{pay.desc}</p>
                             </button>
                           ))}
                         </div>
@@ -322,33 +382,33 @@ export default function CheckoutPage() {
                               </div>
 
                               {/* Card input forms */}
-                              <div className="p-6 rounded-3xl bg-surface-2 border border-white/5 grid gap-4 shadow-sm">
+                              <div className="p-6 rounded-3xl bg-surface-2 border border-border grid gap-4 shadow-sm">
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Card Number</label>
+                                  <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Card Number</label>
                                   <input type="text" placeholder="1234 5678 9012 3456"
-                                    className="input border-white/8 rounded-xl text-xs" value={cardDetails.number}
+                                    className="input border-border rounded-xl text-xs text-text-primary" value={cardDetails.number}
                                     onChange={(e) => setCardDetails({ ...cardDetails, number: e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim().slice(0, 19) })}
                                     id="card-number" />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Cardholder Name</label>
+                                  <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Cardholder Name</label>
                                   <input type="text" placeholder="JOHN DOE"
-                                    className="input border-white/8 rounded-xl text-xs uppercase" value={cardDetails.name}
+                                    className="input border-border rounded-xl text-xs uppercase text-text-primary" value={cardDetails.name}
                                     onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })}
                                     id="card-name" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                   <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">Expiry Date</label>
+                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">Expiry Date</label>
                                     <input type="text" placeholder="MM/YY"
-                                      className="input border-white/8 rounded-xl text-xs" value={cardDetails.expiry}
+                                      className="input border-border rounded-xl text-xs text-text-primary" value={cardDetails.expiry}
                                       onChange={(e) => setCardDetails({ ...cardDetails, expiry: e.target.value.replace(/\D/g, "").replace(/(.{2})/, "$1/").slice(0, 5) })}
                                       id="card-expiry" />
                                   </div>
                                   <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest">CVV</label>
+                                    <label className="text-[10px] font-black text-text-muted uppercase tracking-widest">CVV</label>
                                     <input type="password" placeholder="•••"
-                                      className="input border-white/8 rounded-xl text-xs" value={cardDetails.cvv}
+                                      className="input border-border rounded-xl text-xs text-text-primary" value={cardDetails.cvv}
                                       onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value.replace(/\D/g, "").slice(0, 3) })}
                                       id="card-cvv" />
                                   </div>
@@ -361,9 +421,9 @@ export default function CheckoutPage() {
                     )}
 
                     {/* Back / Next action bar */}
-                    <div className="flex items-center justify-between pt-6 border-t border-white/5 mt-8">
+                    <div className="flex items-center justify-between pt-6 border-t border-border mt-8">
                       <button onClick={handleBack} disabled={activeStep === 0}
-                        className="px-6 py-3 rounded-xl border border-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:hover:text-white/60 font-bold text-xs uppercase tracking-wider transition-all">
+                        className="px-6 py-3 rounded-xl border border-border text-text-secondary hover:text-text-primary disabled:opacity-30 disabled:hover:text-text-secondary font-bold text-xs uppercase tracking-wider transition-all">
                         Back
                       </button>
                       <button onClick={handleNext}
@@ -380,9 +440,9 @@ export default function CheckoutPage() {
 
             {/* Right Column: Sticky Summary Panel (4 Cols) */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="glass-card rounded-3xl border border-white/8 p-6 space-y-6 bg-surface-2 sticky top-28 shadow-xl">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <h3 className="font-display font-bold text-base text-white">Order Summary</h3>
+              <div className="glass-card rounded-3xl border border-border p-6 space-y-6 bg-surface-2 sticky top-28 shadow-xl">
+                <div className="flex items-center justify-between border-b border-border pb-4">
+                  <h3 className="font-display font-bold text-base text-text-primary">Order Summary</h3>
                   <span className="badge badge-primary text-[9px]">{items.length} items</span>
                 </div>
 
@@ -390,46 +450,46 @@ export default function CheckoutPage() {
                 <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
                   {items.map((item) => (
                     <div key={item.id} className="flex gap-3 text-xs">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-3 flex-shrink-0 border border-white/5">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-surface-3 flex-shrink-0 border border-border">
                         <img src={item.product.images[0]} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-white truncate">{item.product.name}</p>
-                        <p className="text-[10px] text-white/40 mt-0.5 font-semibold">Qty: {item.quantity}</p>
+                        <p className="font-bold text-text-primary truncate">{item.product.name}</p>
+                        <p className="text-[10px] text-text-muted mt-0.5 font-semibold">Qty: {item.quantity}</p>
                       </div>
-                      <span className="font-bold text-white">{formatCurrency(item.product.price * item.quantity)}</span>
+                      <span className="font-bold text-text-primary">{formatCurrency(item.product.price * item.quantity)}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Price Breakdown */}
-                <div className="space-y-3 pt-4 border-t border-white/5 text-xs">
-                  <div className="flex justify-between text-white/50">
+                <div className="space-y-3 pt-4 border-t border-border text-xs">
+                  <div className="flex justify-between text-text-muted">
                     <span>Subtotal</span>
                     <span>{formatCurrency(subtotal())}</span>
                   </div>
-                  <div className="flex justify-between text-white/50">
+                  <div className="flex justify-between text-text-muted">
                     <span>GST (18%)</span>
                     <span>{formatCurrency(gstCost)}</span>
                   </div>
-                  <div className="flex justify-between text-white/50">
+                  <div className="flex justify-between text-text-muted">
                     <span>Shipping Speed Charge</span>
                     <span>{shippingCost === 0 ? <span className="text-success font-semibold">FREE</span> : formatCurrency(shippingCost)}</span>
                   </div>
                   {giftWrapping && (
-                    <div className="flex justify-between text-white/50">
+                    <div className="flex justify-between text-text-muted">
                       <span>Luxury wrapping fee</span>
                       <span>{formatCurrency(49)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-display font-black text-white text-base pt-4 border-t border-white/5">
+                  <div className="flex justify-between font-display font-black text-text-primary text-base pt-4 border-t border-border">
                     <span>Total Amount</span>
                     <span className="gradient-text">{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
 
                 {/* Secure SSL badge */}
-                <div className="pt-4 border-t border-white/5 flex items-center justify-center gap-2 text-[10px] text-white/40 font-bold uppercase tracking-wider">
+                <div className="pt-4 border-t border-border flex items-center justify-center gap-2 text-[10px] text-text-muted font-bold uppercase tracking-wider">
                   <ShieldCheck className="w-4 h-4 text-success" />
                   <span>Secure Payments by Razorpay</span>
                 </div>

@@ -200,14 +200,22 @@ export default function ProductsPage() {
   const { ref: loadMoreRef, inView } = useInView();
 
   const [mounted, setMounted] = useState(false);
-  const [products, setProducts] = useState<any[]>(mockProducts);
+  const [products, setProducts] = useState<any[]>([]);
 
   useEffect(() => {
     setMounted(true);
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("nexmart-products");
       if (stored) {
-        setProducts(JSON.parse(stored));
+        const all = JSON.parse(stored);
+        // Only show approved products to the public storefront
+        setProducts(all.filter((p: any) => p.approved !== false));
+      } else {
+        // Seed with mock data on first load
+        const { mockProducts } = require("@/lib/mock-data");
+        const seeded = mockProducts.map((p: any) => ({ ...p, approved: true }));
+        localStorage.setItem("nexmart-products", JSON.stringify(seeded));
+        setProducts(seeded);
       }
     }
   }, []);

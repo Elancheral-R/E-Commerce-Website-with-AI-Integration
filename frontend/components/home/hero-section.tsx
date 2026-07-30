@@ -25,15 +25,48 @@ const trustBadges = [
 const heroProducts = mockProducts.filter((p) => p.isFeatured).slice(0, 3);
 
 function ProductShowcase() {
+  const [products, setProducts] = useState<any[]>([]);
   const [currentProduct, setCurrentProduct] = useState(0);
   const { addItem, openCart } = useCartStore();
 
   useEffect(() => {
-    const t = setInterval(() => setCurrentProduct((p) => (p + 1) % heroProducts.length), 4000);
-    return () => clearInterval(t);
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("nexmart-products");
+      if (stored) {
+        setProducts(JSON.parse(stored).filter((p: any) => p.approved !== false));
+      }
+    }
   }, []);
 
+  const heroProducts = products.filter((p) => p.isFeatured).length > 0
+    ? products.filter((p) => p.isFeatured).slice(0, 3)
+    : products.slice(0, 3);
+
+  useEffect(() => {
+    if (heroProducts.length === 0) return;
+    const t = setInterval(() => setCurrentProduct((p) => (p + 1) % heroProducts.length), 4000);
+    return () => clearInterval(t);
+  }, [heroProducts.length]);
+
   const featured = heroProducts[currentProduct];
+
+  if (heroProducts.length === 0) {
+    return (
+      <div className="relative">
+        <div className="absolute inset-0 bg-surface-2 rounded-2xl scale-102 border border-border/40 -z-10" />
+        <div className="relative bg-surface rounded-2xl p-8 border border-border shadow-md text-center">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-4">
+            <ShoppingBag className="w-8 h-8" />
+          </div>
+          <h3 className="font-display font-bold text-lg text-text-primary mb-1">Welcome to NexMart</h3>
+          <p className="text-text-muted text-xs mb-4">Discover products added by verified sellers or start selling today!</p>
+          <Link href="/seller/dashboard" className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-xs">
+            Become a Seller <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">

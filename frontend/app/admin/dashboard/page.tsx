@@ -27,16 +27,19 @@ const adminStats = [
   { label: "Orders / Min", value: 48, change: 5.4, icon: ShoppingBag },
 ];
 
-const fraudAlerts = [
-  { id: "fa1", user: "Vikram Malhotra", email: "vikram@example.com", reason: "Multiple checkout failures + coupon abuse", score: 92, status: "critical" },
-  { id: "fa2", user: "Sneha Reddy", email: "sneha.r@example.com", reason: "IP address mismatch + high value order", score: 78, status: "warning" },
-  { id: "fa3", user: "Bot Account #8942", email: "bot8942@botnet.org", reason: "Scripted click behavior during flash sale", score: 98, status: "critical" },
+
+const DEFAULT_FRAUD_ALERTS = [
+  { id: "fa1", user: "Vikram Malhotra", email: "vikram@example.com", reason: "Multiple checkout failures + coupon abuse", score: 92, status: "critical", resolved: false, blocked: false },
+  { id: "fa2", user: "Sneha Reddy", email: "sneha.r@example.com", reason: "IP address mismatch + high value order", score: 78, status: "warning", resolved: false, blocked: false },
+  { id: "fa3", user: "Bot Account #8942", email: "bot8942@botnet.org", reason: "Scripted click behavior during flash sale", score: 98, status: "critical", resolved: false, blocked: false },
 ];
+
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "fraud" | "inventory" | "sellers" | "create-product" | "flash-sales" | "categories">("overview");
+  const [fraudAlertsList, setFraudAlertsList] = useState<any[]>([]);
 
   // Local state for dynamically loaded tables
   const [localUsers, setLocalUsers] = useState<any[]>([]);
@@ -117,6 +120,15 @@ export default function AdminDashboardPage() {
       // 5. Load catalogues
       const cats = localStorage.getItem("nexmart-catalogues");
       setLocalCatalogues(cats ? JSON.parse(cats) : []);
+
+      // 6. Load / seed fraud alerts
+      const fraudRaw = localStorage.getItem("nexmart-fraud-alerts");
+      if (fraudRaw) {
+        setFraudAlertsList(JSON.parse(fraudRaw));
+      } else {
+        localStorage.setItem("nexmart-fraud-alerts", JSON.stringify(DEFAULT_FRAUD_ALERTS));
+        setFraudAlertsList(DEFAULT_FRAUD_ALERTS);
+      }
     }
   }, []);
 
@@ -186,9 +198,12 @@ export default function AdminDashboardPage() {
 
   // ── Seller Application Handlers ──
   const handleApproveApplication = (appId: string, userId: string) => {
-    // Update application status
+    const now = new Date().toISOString();
+    // Update application status with approval metadata
     const updatedApps = sellerApplications.map((a) =>
-      a.id === appId ? { ...a, status: "approved" } : a
+      a.id === appId
+        ? { ...a, status: "approved", approvedAt: now, approvedBy: user?.id || "admin-001" }
+        : a
     );
     setSellerApplications(updatedApps);
     localStorage.setItem("nexmart-seller-applications", JSON.stringify(updatedApps));
@@ -196,16 +211,33 @@ export default function AdminDashboardPage() {
     // Promote user role to seller with 10% commission
     const users = JSON.parse(localStorage.getItem("nexmart-users-db") || "[]");
     const updatedUsers = users.map((u: any) =>
-      u.id === userId ? { ...u, role: "seller", commissionRate: 10 } : u
+      u.id === userId
+        ? { ...u, role: "seller", commissionRate: 10, sellerApprovedAt: now, sellerApprovedBy: user?.id }
+        : u
     );
     localStorage.setItem("nexmart-users-db", JSON.stringify(updatedUsers));
     setLocalUsers(updatedUsers);
-    alert("Seller approved! They can now list products with 10% commission.");
+
+    // Send approval notification to the seller
+    const notifKey = `nexmart-seller-notifications-${userId}`;
+    const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || "[]");
+    existingNotifs.unshift({
+      id: `notif-approval-${Date.now()}`,
+      type: "approval",
+      title: "🎉 Application Approved!",
+      message: "Congratulations! Your seller application has been approved. You can now list products, manage inventory, and process orders. Please re-login to activate your Seller Dashboard.",
+      createdAt: now,
+      read: false,
+    });
+    localStorage.setItem(notifKey, JSON.stringify(existingNotifs));
+
+    alert("Seller approved! They will see a notification on their next login to activate the Seller Dashboard.");
   };
 
   const handleRejectApplication = (appId: string, userId: string) => {
+    const now = new Date().toISOString();
     const updatedApps = sellerApplications.map((a) =>
-      a.id === appId ? { ...a, status: "rejected" } : a
+      a.id === appId ? { ...a, status: "rejected", rejectedAt: now, rejectedBy: user?.id } : a
     );
     setSellerApplications(updatedApps);
     localStorage.setItem("nexmart-seller-applications", JSON.stringify(updatedApps));
@@ -217,7 +249,21 @@ export default function AdminDashboardPage() {
     );
     localStorage.setItem("nexmart-users-db", JSON.stringify(updatedUsers));
     setLocalUsers(updatedUsers);
-    alert("Application rejected. User reverted to customer.");
+
+    // Notify the user of rejection
+    const notifKey = `nexmart-seller-notifications-${userId}`;
+    const existingNotifs = JSON.parse(localStorage.getItem(notifKey) || "[]");
+    existingNotifs.unshift({
+      id: `notif-rejection-${Date.now()}`,
+      type: "rejection",
+      title: "Seller Application Update",
+      message: "Your seller application was not approved at this time. Please contact support for more details or re-apply after addressing the concerns.",
+      createdAt: now,
+      read: false,
+    });
+    localStorage.setItem(notifKey, JSON.stringify(existingNotifs));
+
+    alert("Application rejected. User notified and reverted to customer.");
   };
 
   // ── Catalogue Handlers ──
@@ -532,45 +578,141 @@ export default function AdminDashboardPage() {
               )}
 
               {/* AI Fraud Alerts Tab */}
-              {activeTab === "fraud" && (
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <ShieldAlert className="w-6 h-6 text-danger" />
-                    <h2 className="font-display font-bold text-xl text-text-primary">AI Fraud Detection Panel</h2>
-                  </div>
+              {activeTab === "fraud" && (() => {
+                const activeFraud = fraudAlertsList.filter((a) => !a.resolved);
 
-                  <div className="grid gap-4">
-                    {fraudAlerts.map((alert) => (
-                      <div key={alert.id} className="glass-card rounded-2xl border border-border p-6 bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-text-primary text-base">{alert.user}</p>
-                            <span className="text-xs text-text-muted">{alert.email}</span>
+                const handleResolveFraud = (id: string) => {
+                  const updated = fraudAlertsList.map((a) => a.id === id ? { ...a, resolved: true } : a);
+                  setFraudAlertsList(updated);
+                  localStorage.setItem("nexmart-fraud-alerts", JSON.stringify(updated));
+                };
+
+                const handleBlockUser = (alert: any) => {
+                  // Mark alert as resolved + blocked
+                  const updatedAlerts = fraudAlertsList.map((a) => a.id === alert.id ? { ...a, resolved: true, blocked: true } : a);
+                  setFraudAlertsList(updatedAlerts);
+                  localStorage.setItem("nexmart-fraud-alerts", JSON.stringify(updatedAlerts));
+                  // Block user in users DB
+                  const users = JSON.parse(localStorage.getItem("nexmart-users-db") || "[]");
+                  const updatedUsers = users.map((u: any) => u.email === alert.email ? { ...u, blocked: true } : u);
+                  localStorage.setItem("nexmart-users-db", JSON.stringify(updatedUsers));
+                  setLocalUsers(updatedUsers);
+                  alert("User has been blocked and fraud alert resolved.");
+                };
+
+                const handleAddFraudAlert = () => {
+                  const email = prompt("Enter user email for fraud alert:");
+                  const reason = prompt("Enter fraud reason:");
+                  const score = parseInt(prompt("Enter risk score (0-100):") || "50");
+                  if (!email || !reason) return;
+                  const newAlert = {
+                    id: `fa-${Date.now()}`,
+                    user: email.split("@")[0],
+                    email,
+                    reason,
+                    score,
+                    status: score >= 85 ? "critical" : "warning",
+                    resolved: false,
+                    blocked: false,
+                  };
+                  const updated = [...fraudAlertsList, newAlert];
+                  setFraudAlertsList(updated);
+                  localStorage.setItem("nexmart-fraud-alerts", JSON.stringify(updated));
+                };
+
+                return (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-6 h-6 text-danger" />
+                        <h2 className="font-display font-bold text-xl text-text-primary">AI Fraud Detection Panel</h2>
+                        {activeFraud.length > 0 && (
+                          <span className="badge badge-danger text-[10px]">{activeFraud.length} Active</span>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleAddFraudAlert}
+                        className="px-3 py-2 bg-primary/10 text-primary hover:bg-primary hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Alert
+                      </button>
+                    </div>
+
+                    {activeFraud.length === 0 ? (
+                      <div className="glass-card rounded-2xl border border-border p-16 text-center bg-surface">
+                        <CheckCircle className="w-12 h-12 text-success mx-auto mb-3 opacity-50" />
+                        <p className="font-semibold text-text-primary">All Clear</p>
+                        <p className="text-text-muted text-xs mt-1">No active fraud alerts detected.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {activeFraud.map((alert) => (
+                          <div key={alert.id} className="glass-card rounded-2xl border border-border p-6 bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-text-primary text-base">{alert.user}</p>
+                                <span className={`badge text-[10px] ${alert.status === "critical" ? "badge-danger" : "badge-warning"}`}>{alert.status}</span>
+                                <span className="text-xs text-text-muted">{alert.email}</span>
+                              </div>
+                              <p className="text-sm text-text-secondary">{alert.reason}</p>
+                            </div>
+
+                            <div className="flex items-center gap-6">
+                              <div className="text-right">
+                                <span className="text-xs text-text-muted block">Risk Score</span>
+                                <span className={`font-bold text-lg ${alert.score > 85 ? "text-danger" : "text-warning"}`}>
+                                  {alert.score}% Risk
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleResolveFraud(alert.id)}
+                                  title="Mark Resolved"
+                                  className="p-2 rounded-xl bg-success/10 text-success hover:bg-success hover:text-white transition-all"
+                                >
+                                  <CheckCircle className="w-5 h-5" />
+                                </button>
+                                <button
+                                  onClick={() => handleBlockUser(alert)}
+                                  title="Block User"
+                                  className="p-2 rounded-xl bg-danger/10 text-danger hover:bg-danger hover:text-white transition-all"
+                                >
+                                  <XCircle className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm text-text-secondary">{alert.reason}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Resolved alerts */}
+                    {fraudAlertsList.filter((a) => a.resolved).length > 0 && (
+                      <div className="glass-card rounded-2xl border border-border bg-surface overflow-hidden">
+                        <div className="p-4 border-b border-border">
+                          <p className="font-semibold text-text-primary text-sm flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 text-success" />
+                            Resolved Alerts ({fraudAlertsList.filter((a) => a.resolved).length})
+                          </p>
                         </div>
-
-                        <div className="flex items-center gap-6">
-                          <div className="text-right">
-                            <span className="text-xs text-text-muted block">Risk Score</span>
-                            <span className={`font-bold text-lg ${alert.score > 85 ? "text-danger" : "text-warning"}`}>
-                              {alert.score}% Risk
-                            </span>
-                          </div>
-                          <div className="flex gap-2">
-                            <button className="p-2 rounded-xl bg-success/10 text-success hover:bg-success hover:text-white transition-all">
-                              <CheckCircle className="w-5 h-5" />
-                            </button>
-                            <button className="p-2 rounded-xl bg-danger/10 text-danger hover:bg-danger hover:text-white transition-all">
-                              <XCircle className="w-5 h-5" />
-                            </button>
-                          </div>
+                        <div className="divide-y divide-border/40">
+                          {fraudAlertsList.filter((a) => a.resolved).map((alert) => (
+                            <div key={alert.id} className="p-4 flex items-center justify-between gap-4 opacity-60">
+                              <div>
+                                <p className="font-semibold text-text-secondary text-sm">{alert.user} · <span className="text-text-muted text-xs">{alert.email}</span></p>
+                                <p className="text-xs text-text-muted">{alert.reason}</p>
+                              </div>
+                              <span className={`badge text-[10px] ${alert.blocked ? "badge-danger" : "badge-success"}`}>
+                                {alert.blocked ? "BLOCKED" : "CLEARED"}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Dynamic User Management Table */}
               {activeTab === "users" && (

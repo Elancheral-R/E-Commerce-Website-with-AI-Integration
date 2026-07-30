@@ -8,9 +8,14 @@ import { useState } from "react";
 import { mockProducts } from "@/lib/mock-data";
 
 if (typeof window !== "undefined") {
-  // Seeding default products if they don't exist
-  if (!localStorage.getItem("nexmart-products")) {
-    localStorage.setItem("nexmart-products", JSON.stringify(mockProducts));
+  // Clear any default mock products from localStorage
+  const stored = localStorage.getItem("nexmart-products");
+  if (stored) {
+    const list: any[] = JSON.parse(stored);
+    const cleaned = list.filter((p: any) => !["p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"].includes(p.id));
+    localStorage.setItem("nexmart-products", JSON.stringify(cleaned));
+  } else {
+    localStorage.setItem("nexmart-products", JSON.stringify([]));
   }
 
   if (process.env.NODE_ENV === "development") {
